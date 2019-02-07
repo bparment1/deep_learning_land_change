@@ -75,9 +75,12 @@ def open_image(url):
 #####  Parameters and argument set up ########### 
 
 #ARGS 1
-in_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/python/Exercise_4/data"
+#in_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/python/Exercise_4/data"
+in_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/AAG/deeplearning/land_change_Houston_deep_learning/data"
 #ARGS 2
-out_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/python/Exercise_4/outputs"
+#out_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/python/Exercise_4/outputs"
+out_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/AAG/deeplearning/land_change_Houston_deep_learning/outputs"
+
 #ARGS 3:
 create_out_dir=True #create a new ouput dir if TRUE
 #ARGS 7
@@ -92,9 +95,18 @@ method_proj_val = "bilinear" # method option for the reprojection and resampling
 gdal_installed = True #if TRUE, GDAL is used to generate distance files
 		
 ### Input data files
-rastername_county_harris = "harris_county_mask.tif" #Region of interest: extent of Harris County
-elevation_fname = "srtm_Houston_area_90m.tif" #SRTM elevation
-roads_fname = "r_roads_Harris.tif" #Road count for Harris county
+#rastername_county_harris = "harris_county_mask.tif" #Region of interest: extent of Harris County
+#elevation_fname = "srtm_Houston_area_90m.tif" #SRTM elevation
+#roads_fname = "r_roads_Harris.tif" #Road count for Harris county
+
+# -12 layers from land cover concensus (Jetz lab)
+fileglob = "*.tif"
+pathglob = os.path.join(in_dir, fileglob)
+l_f = glob.glob(pathglob)
+l_f.sort() #order input by decade
+l_dir = map(lambda x: os.path.splitext(x)[0],l_f) #remmove extension
+l_dir = map(lambda x: os.path.join(out_dir,os.path.basename(x)),l_dir) #set the directory output
+ 
 	
 ### Aggreagate NLCD input files
 infile_land_cover_date1 = "agg_3_r_nlcd2001_Houston.tif"
