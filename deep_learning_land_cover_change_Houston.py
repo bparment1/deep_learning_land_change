@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 02/07/2019
+#DATE MODIFIED: 02/11/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -198,37 +198,6 @@ webcolors.rgb_to_name(rgb_col[1])
 color_val_water = rgb_col[1]
 color_val_developed_high = rgb_col[7]
 
-#color_val_water <- rgb(lc_legend_df$Red[2],lc_legend_df$Green[2],lc_legend_df$Blue[2],maxColorValue = 255)
-#color_val_developed_high <- rgb(lc_legend_df$Red[7],lc_legend_df$Green[7],lc_legend_df$Blue[7],maxColorValue = 255)
-	
-#lc_col_palette <- c(color_val_water,color_val_developed_high)
-	
-#barplot(c(1,1),
-#col=lc_col_palette,
-#main="Visualization of color palette for NLCD land cover",
-#names.arg=c("Open water", "Developed, High Intensity"),las=1)
-	
-### Let's generate a color for all the land cover categories by using lapply and function
-#n_cat <- nrow(lc_legend_df)
-#lc_col_palette <- lapply(1:n_cat,
-#FUN=function(i){rgb(lc_legend_df$Red[i],lc_legend_df$Green[i],lc_legend_df$Blue[i],maxColorValue = 255)})
-#lc_col_palette <- unlist(lc_col_palette)
-	
-#lc_legend_df$palette <- lc_col_palette
-	
-#r_lc_date2 <- ratify(r_lc_date2) # create a raster layer with categorical information
-#rat <- levels(r_lc_date2)[[1]] #This is a data.frame with the categories present in the raster
-	
-#lc_legend_df_date2 <- subset(lc_legend_df,lc_legend_df$ID%in% (rat[,1])) #find the land cover types present in date 2 (2006)
-#rat$legend <- lc_legend_df_date2$NLCD.2006.Land.Cover.Class #assign it back in case it is missing
-#levels(r_lc_date2) <- rat #add the information to the raster layer
-	
-### Now generate a plot of land cover with the NLCD legend and palette
-#levelplot(r_lc_date2,
-#	col.regions = lc_legend_df_date2$palette,
-#	scales=list(draw=FALSE),
-#	main = "NLCD 2006")
-	
 
 #######
 ################################################
@@ -239,82 +208,13 @@ color_val_developed_high = rgb_col[7]
 
 ## To generalize the information, let's aggregate leveraging the hierachical nature of NLCD Anderson Classification system.
 
-lc_system_nlcd_df = pd.read_excel(os.path.join(in_dir,infile_name_nlcd_classification_system))
-lc_system_nlcd_df.head #inspect data
 
-val, cnts =np.unique(r_lc_date1,return_counts=True)
+data_fname = 'r_variables_harris_county_exercise4_02072019.txt'
 
-df = pd.DataFrame(np.ma.filled(val))
-pd.set_option('display.float_format', lambda x: '%.3f' % x)
-df_date1 = pd.DataFrame(val,cnts)
-df_date1 = df_date1.reset_index()
-df_date1.columns = ['y_2001','value']
+#data_df = pd.read_table(os.path.join(in_dir,data_fname))
+data_df = pd.read_csv(os.path.join(in_dir,data_fname))
+data_df.columns
 
-val, cnts =np.unique(r_lc_date2,return_counts=True)
-df = pd.DataFrame(np.ma.filled(val))
-pd.set_option('display.float_format', lambda x: '%.3f' % x)
-df_date2 = pd.DataFrame(val,cnts)
-df_date2 = df_date2.reset_index()
-df_date2.columns = ['y_2006','value']
-
-### Let's identify existing cover and compute change:
-#r_stack_nlcd <- stack(r_lc_date1,r_lc_date2)
-#freq_tb_nlcd <- as.data.frame(freq(r_stack_nlcd,merge=T))
-#head(freq_tb_nlcd)
-freq_tb_nlcd = pd.merge(df_date1,df_date2,on='value')
-#reorder columns 
-freq_tb_nlcd = freq_tb_nlcd[['value','y_2001','y_2006']]
-
-#dim(lc_system_nlcd_df) # We have categories that are not relevant to the study area and time period.
-#lc_system_nlcd_df <- subset(lc_system_nlcd_df,id_l2%in%freq_tb_nlcd$value ) 
-#dim(lc_system_nlcd_df) # Now 15 land categories instead of 20.
-
-lc_system_nlcd_df.shape
-selected_cat = lc_system_nlcd_df.id_l2.isin(freq_tb_nlcd.value)
-lc_system_nlcd_df = lc_system_nlcd_df[selected_cat]
-
-### Selectet relevant columns for the reclassification
-rec_df <- lc_system_nlcd_df[,c(2,1)]
-r_date1_rec <- subs(r_lc_date1,rec_df,by="id_l2","id_l1")
-r_date2_rec <- subs(r_lc_date2,rec_df,by="id_l2","id_l1")
-
-plot(r_date1_rec)
-
-rec_xtab_df <- crosstab(r_date1_rec,r_date2_rec,long=T)
-names(rec_xtab_df) <- c("2001","2011","freq")
-
-head(rec_xtab_df)
-dim(rec_xtab_df) #9*9 possible transitions if we include NA values
-print(rec_xtab_df) # View the full table
-
-which.max(rec_xtab_df$freq)
-rec_xtab_df[11,] # Note the most important transition is persistence!!
-
-### Let's rank the transition:
-class(rec_xtab_df)
-is.na(rec_xtab_df$freq)
-rec_xtab_df_ranked <- rec_xtab_df[order(rec_xtab_df$freq,decreasing=T) , ]
-head(rec_xtab_df_ranked) # Unsurprsingly, top transitions are persistence categories
-
-### Let's examine the overall change in categories rather than transitions
-
-label_legend_df <- data.frame(ID=lc_system_nlcd_df$id_l1,name=lc_system_nlcd_df$name_l1)
-r_stack <- stack(r_date1_rec,r_date2_rec)
-
-lc_df <- freq(r_stack,merge=T)
-names(lc_df) <- c("value","date1","date2")
-lc_df$diff <- lc_df$date2 - lc_df$date1 #difference for each land cover categories over the 2001-2011 time period
-head(lc_df) # Quickly examine the output
-
-### Add relevant categories
-lc_df <- merge(lc_df,label_legend_df,by.x="value",by.y="ID",all.y=F)
-lc_df <- lc_df[!duplicated(lc_df),] #remove duplictates
-head(lc_df) # Note the overall cahnge
-#### Now visualize the overall land cover changes
-barplot(lc_df$diff,names.arg=lc_df$name,las=2)
-total_val  <- sum(lc_df$date1)
-lc_df$perc_change <- 100*lc_df$diff/total_val 
-barplot(lc_df$perc_change,names.arg=lc_df$name,las=2)
 
 
 
