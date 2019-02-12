@@ -42,6 +42,7 @@ from osgeo import osr
 from shapely.geometry import Point
 from collections import OrderedDict
 import webcolors
+import sklearn
 
 ################ NOW FUNCTIONS  ###################
 
@@ -216,6 +217,63 @@ data_df = pd.read_csv(os.path.join(in_dir,data_fname))
 data_df.columns
 
 
+## Split training and testing
+selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
+selected_target_names = ['change'] #also called dependent variable
+#from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
+
+#X_train, X_test, y_train, y_test = train_test_split(X=data_df[selected_covariates_names].values, 
+#                                                    y=data_df[selected_target_names].values, 
+#                                                    test_size=0.30, 
+#                                                    random_state=100)
+
+
+X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names], 
+                                                    data_df[selected_target_names], 
+                                                    test_size=0.30, 
+                                                    random_state=100)
+
+X_train.shape
+
+#### Scaling
+
+from sklearn.preprocessing import MinMaxScaler
+
+# Load training data set from CSV file
+#training_data_df = pd.read_csv("sales_data_training.csv")
+
+# Load testing data set from CSV file
+#test_data_df = pd.read_csv("sales_data_test.csv")
+
+# Data needs to be scaled to a small range like 0 to 1 for the neural
+# network to work well.
+scaler = MinMaxScaler(feature_range=(0, 1))
+
+##### need to use one hot encoding or text embedding to normalize categorical variables
+#https://dzone.com/articles/artificial-intelligence-a-radical-anti-humanism
+# Scale both the training inputs and outputs
+#scaled_training = scaler.fit_transform(training_data_df)
+#scaled_testing = scaler.transform(test_data_df)
+
+scaled_training = scaler.fit_transform(X_train)
+scaled_testing = scaler.transform(X_test)
+
+type(scaled_training)
+scaled_training.shape
+
+# Print out the adjustment that the scaler applied to the total_earnings column of data
+#print("Note: total_earnings values were scaled by multiplying by {:.10f} and adding {:.6f}".format(scaler.scale_[8], scaler.min_[8]))
+
+# Create new pandas DataFrame objects from the scaled data
+#scaled_training_df = pd.DataFrame(scaled_training, columns=training_data_df.columns.values)
+#scaled_testing_df = pd.DataFrame(scaled_testing, columns=test_data_df.columns.values)
+scaled_training_df = pd.DataFrame(scaled_training, columns=selected_covariates_names)
+scaled_testing_df = pd.DataFrame(scaled_testing, columns=selected_target_names)
+
+# Save scaled data dataframes to new CSV files
+scaled_training_df.to_csv("sales_data_training_scaled.csv", index=False)
+scaled_testing_df.to_csv("sales_data_testing_scaled.csv", index=False)
 
 
 ###################### END OF SCRIPT #####################
