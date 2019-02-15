@@ -130,25 +130,11 @@ else:
     os.chdir(create_out_dir) #use working dir defined earlier
     
     
-#######################################
-### PART 1: Read in DATA #######
 
 ###########################################
 ### PART I: READ AND VISUALIZE DATA #######
 	
 infile_land_cover_date1 = os.path.join(in_dir,infile_land_cover_date1) #NLCD 2001
-
-
-
-#######
-################################################
-###  PART II : Analyze change and transitions
-
-## As the plot shows for 2006, we have 15 land cover types. Analyzing such complex categories in terms of decreasse (loss), increase (gain), 
-# persistence in land cover will generate a large number of transitions (potential up to 15*15=225 transitions in this case!)
-
-## To generalize the information, let's aggregate leveraging the hierachical nature of NLCD Anderson Classification system.
-
 
 data_fname = 'r_variables_harris_county_exercise4_02072019.txt'
 
@@ -156,6 +142,8 @@ data_fname = 'r_variables_harris_county_exercise4_02072019.txt'
 data_df = pd.read_csv(os.path.join(in_dir,data_fname))
 data_df.columns
 
+###########################################
+### PART 2: Split test and train, rescaling #######
 
 ## Split training and testing
 selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
@@ -217,6 +205,9 @@ scaled_testing_df = pd.DataFrame(scaled_testing, columns=selected_target_names)
 #scaled_training_df.to_csv("sales_data_training_scaled.csv", index=False)
 #scaled_testing_df.to_csv("sales_data_testing_scaled.csv", index=False)
 
+###########################################
+### PART 3: build model and train #######
+
 from keras.models import Sequential
 from keras.layers import *
 
@@ -228,8 +219,10 @@ from keras.layers import *
 X = X_train # to be replaced by the scaled values
 Y = y_train
 # Define the model
+
+#NOTE INPUT SHOULD BE THE NUMBER OF VAR
 model = Sequential()
-model.add(Dense(50, input_dim=9, activation='relu'))
+model.add(Dense(50, input_dim=4, activation='relu'))
 model.add(Dense(100, activation='relu'))
 model.add(Dense(50, activation='relu'))
 model.add(Dense(1, activation='linear'))
@@ -245,7 +238,36 @@ model.fit(
     verbose=2
 )
 
-#### Now track accurary by epoch
+###########################################
+### PART 4: Accuracy and prediction on new data #######
+
+# Load the separate test data set
+test_data_df = pd.read_csv("sales_data_test_scaled.csv")
+
+X_test = test_data_df.drop('total_earnings', axis=1).values
+Y_test = test_data_df[['total_earnings']].values
+
+test_error_rate = model.evaluate(X_test, 
+                                 Y_test, 
+                                 verbose=0)
+print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
+
+
+# Load the data we make to use to make a prediction
+X = pd.read_csv("proposed_new_product.csv").values
+
+# Make a prediction with the neural network
+prediction = model.predict(X)
+
+# Grab just the first element of the first prediction (since that's the only have one)
+prediction = prediction[0][0]
+
+# Re-scale the data from the 0-to-1 range back to dollars
+# These constants are from when the data was originally scaled down to the 0-to-1 range
+prediction = prediction + 0.1159
+prediction = prediction / 0.0000036968
+
+print("Earnings Prediction for Proposed Product - ${}".format(prediction))
 
 ###################### END OF SCRIPT #####################
 
