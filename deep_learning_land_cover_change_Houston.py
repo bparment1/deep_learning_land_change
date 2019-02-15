@@ -112,11 +112,6 @@ l_dir = map(lambda x: os.path.join(out_dir,os.path.basename(x)),l_dir) #set the 
 	
 ### Aggreagate NLCD input files
 infile_land_cover_date1 = "agg_3_r_nlcd2001_Houston.tif"
-infile_land_cover_date2 = "agg_3_r_nlcd2006_Houston.tif"
-infile_land_cover_date3 = "agg_3_r_nlcd2011_Houston.tif"
-	
-infile_name_nlcd_legend = "nlcd_legend.txt"
-infile_name_nlcd_classification_system = "classification_system_nlcd_legend.xlsx"
 	
 ################# START SCRIPT ###############################
 
@@ -142,63 +137,7 @@ else:
 ### PART I: READ AND VISUALIZE DATA #######
 	
 infile_land_cover_date1 = os.path.join(in_dir,infile_land_cover_date1) #NLCD 2001
-infile_land_cover_date2 = os.path.join(in_dir,infile_land_cover_date2) #NLCD 2006
-infile_land_cover_date3 = os.path.join(in_dir,infile_land_cover_date3) #NLCD 2011
 
-lc_date1 = rasterio.open(infile_land_cover_date1) 
-r_lc_date1 = lc_date1.read(1,masked=True) #read first array with masked value, nan are assigned for NA
-lc_date2 = rasterio.open(infile_land_cover_date2) 
-r_lc_date2 = lc_date2.read(1,masked=True) #read first array with masked value, nan are assigned for NA
-lc_date3= rasterio.open(infile_land_cover_date2) 
-r_lc_date3 = lc_date3.read(1,masked=True) #read first array with masked value, nan are assigned for NA
-
-spatial_extent = rasterio.plot.plotting_extent(lc_date1)
-plot.show(r_lc_date1)
-
-#Note that you can also plot the raster io data reader
-type(lc_date2)
-plot.show(lc_date2)
-
-lc_date1.crs # not defined with *.rst
-lc_legend_df = pd.read_table(os.path.join(in_dir,infile_name_nlcd_legend),sep=",")
-	
-lc_legend_df.head() # Inspect data
-plot.show(lc_date2) # View NLCD 2006, we will need to add the legend use the appropriate palette!!
-plot.show(lc_date2,cmap=plt.cm.get_cmap('cubehelix',16 ))	
-### Let's generate a palette from the NLCD legend information to view the existing land cover for 2006.
-#names(lc_legend_df)
-lc_legend_df.columns
-lc_legend_df.shape
-#dim(lc_legend_df) #contains a lot of empty rows
-	
-#lc_legend_df<- subset(lc_legend_df,COUNT>0) #subset the data to remove unsured rows
-lc_legend_df = lc_legend_df[lc_legend_df['COUNT']>0] #subset the data to remove unsured rows
-
-
-# Generate palette
-
-colors_val = ['linen', 'lightgreen', 'darkgreen', 'maroon']
-
-cmap = colors.ListedColormap(colors_val) # can be used directly
-webcolors.rgb_to_name
-webcolors.rgb_to_name((0, 0, 0)) #default is css3 convention
-webcolors.rgb_to_name((255,255,255))
-webcolors.name_to_rgb('navy')
-
-### Generate a palette color from the input Red, Green and Blue information using RGB encoding:
-rgb_col=list(zip(lc_legend_df.Red,lc_legend_df.Green,lc_legend_df.Blue))
-len(rgb_col)
-rgb_col[0]
-#lc_legend_df$rgb <- paste(lc_legend_df$Red,lc_legend_df$Green,lc_legend_df$Blue,sep=",") #combine
-#','.join([lc_legend_df.Red,lc_legend_df.Green, lc_legend_df.Blue]) 	
-
-#lc_legend_df['rgb'] = lc_legend_df[['Red','Green','Blue']].apply[lambda x:]
-lc_legend_df['rgb'] = rgb_col
-### row 2 correspond to the "open water" category
-webcolors.rgb_to_name(rgb_col[1])
-
-color_val_water = rgb_col[1]
-color_val_developed_high = rgb_col[7]
 
 
 #######
@@ -286,6 +225,8 @@ from keras.layers import *
 #X = training_data_df.drop('total_earnings', axis=1).values
 #Y = training_data_df[['total_earnings']].values
 
+X = X_train # to be replaced by the scaled values
+Y = y_train
 # Define the model
 model = Sequential()
 model.add(Dense(50, input_dim=9, activation='relu'))
@@ -295,6 +236,16 @@ model.add(Dense(1, activation='linear'))
 model.compile(loss='mean_squared_error', 
               optimizer='adam')
 
+# Train the model
+model.fit(
+    X,
+    Y,
+    epochs=50,
+    shuffle=True,
+    verbose=2
+)
+
+#### Now track accurary by epoch
 
 ###################### END OF SCRIPT #####################
 
