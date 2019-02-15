@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 02/11/2019
+#DATE MODIFIED: 02/15/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -43,6 +43,7 @@ from shapely.geometry import Point
 from collections import OrderedDict
 import webcolors
 import sklearn
+import keras
 
 ################ NOW FUNCTIONS  ###################
 
@@ -85,7 +86,7 @@ out_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/AAG/deeplearning/lan
 #ARGS 3:
 create_out_dir=True #create a new ouput dir if TRUE
 #ARGS 7
-out_suffix = "deep_learning_houston_LUCC_02072019" #output suffix for the files and ouptut folder
+out_suffix = "deep_learning_houston_LUCC_02152019" #output suffix for the files and ouptut folder
 #ARGS 8
 NA_value = -9999 # number of cores
 file_format = ".tif"
@@ -262,6 +263,8 @@ scaled_testing = scaler.transform(X_test)
 type(scaled_training)
 scaled_training.shape
 
+X = scaled_training
+
 # Print out the adjustment that the scaler applied to the total_earnings column of data
 #print("Note: total_earnings values were scaled by multiplying by {:.10f} and adding {:.6f}".format(scaler.scale_[8], scaler.min_[8]))
 
@@ -272,8 +275,25 @@ scaled_training_df = pd.DataFrame(scaled_training, columns=selected_covariates_n
 scaled_testing_df = pd.DataFrame(scaled_testing, columns=selected_target_names)
 
 # Save scaled data dataframes to new CSV files
-scaled_training_df.to_csv("sales_data_training_scaled.csv", index=False)
-scaled_testing_df.to_csv("sales_data_testing_scaled.csv", index=False)
+#scaled_training_df.to_csv("sales_data_training_scaled.csv", index=False)
+#scaled_testing_df.to_csv("sales_data_testing_scaled.csv", index=False)
+
+from keras.models import Sequential
+from keras.layers import *
+
+#training_data_df = pd.read_csv("sales_data_training_scaled.csv")
+
+#X = training_data_df.drop('total_earnings', axis=1).values
+#Y = training_data_df[['total_earnings']].values
+
+# Define the model
+model = Sequential()
+model.add(Dense(50, input_dim=9, activation='relu'))
+model.add(Dense(100, activation='relu'))
+model.add(Dense(50, activation='relu'))
+model.add(Dense(1, activation='linear'))
+model.compile(loss='mean_squared_error', 
+              optimizer='adam')
 
 
 ###################### END OF SCRIPT #####################
