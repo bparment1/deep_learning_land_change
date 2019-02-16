@@ -238,6 +238,7 @@ model.fit(
     verbose=2
 )
 
+
 ###########################################
 ### PART 4: Accuracy and prediction on new data #######
 
@@ -268,6 +269,9 @@ prediction = prediction + 0.1159
 prediction = prediction / 0.0000036968
 
 print("Earnings Prediction for Proposed Product - ${}".format(prediction))
+
+
+
 
 ###################### END OF SCRIPT #####################
 
