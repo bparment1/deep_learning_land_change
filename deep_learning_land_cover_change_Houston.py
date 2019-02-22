@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 02/15/2019
+#DATE MODIFIED: 02/22/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -166,6 +166,23 @@ X_train.shape
 
 #### Scaling
 
+from sklearn.preprocessing import OneHotEncoder
+enc = OneHotEncoder()
+
+test=[[0, 0, 3], [1, 1, 0], [0, 2, 1], [1, 0, 2]]
+enc.fit(test)   
+OneHotEncoder(categorical_features='all', 
+              dtype=<class 
+              'numpy.float64'>,
+   handle_unknown='error', 
+   n_values='auto', sparse=True)
+>>> enc.n_values_
+array([2, 3, 4])
+>>> enc.feature_indices_
+array([0, 2, 5, 9], dtype=int32)
+>>> enc.transform([[0, 1, 1]]).toarray()
+array([[ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.]])
+
 from sklearn.preprocessing import MinMaxScaler
 
 # Load training data set from CSV file
@@ -274,6 +291,18 @@ print("Earnings Prediction for Proposed Product - ${}".format(prediction))
 
 
 ###################### END OF SCRIPT #####################
+
+>>> from sklearn.preprocessing import OneHotEncoder
+>>> enc = OneHotEncoder()
+>>> enc.fit([[0, 0, 3], [1, 1, 0], [0, 2, 1], [1, 0, 2]])   
+OneHotEncoder(categorical_features='all', dtype=<class 'numpy.float64'>,
+   handle_unknown='error', n_values='auto', sparse=True)
+>>> enc.n_values_
+array([2, 3, 4])
+>>> enc.feature_indices_
+array([0, 2, 5, 9], dtype=int32)
+>>> enc.transform([[0, 1, 1]]).toarray()
+array([[ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.]])
 
 
 
