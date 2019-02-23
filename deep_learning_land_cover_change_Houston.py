@@ -156,7 +156,6 @@ from sklearn.model_selection import train_test_split
 #                                                    test_size=0.30, 
 #                                                    random_state=100)
 
-
 X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names], 
                                                     data_df[selected_target_names], 
                                                     test_size=0.30, 
@@ -169,8 +168,12 @@ X_train.shape
 from sklearn.preprocessing import OneHotEncoder
 enc = OneHotEncoder()
 
+selected_categorical_var_names=['land_cover']
+
+=data_df.columns.isin(selected_categorical_var_names)
+
 test=[[0, 0, 3], [1, 1, 0], [0, 2, 1], [1, 0, 2]]
-enc.fit(test)   
+enc.fit(test,categories='auto')   
 OneHotEncoder(categorical_features='all', 
               dtype=<class 
               'numpy.float64'>,
@@ -246,7 +249,7 @@ model.add(Dense(1, activation='linear'))
 model.compile(loss='mean_squared_error', 
               optimizer='adam')
 
-# Train the model
+# Train the model: takes about 10 min
 model.fit(
     X,
     Y,
@@ -256,17 +259,28 @@ model.fit(
 )
 
 
+model.history.epoch # epoch
+model.history.history.loss
+
+
+
+
 ###########################################
 ### PART 4: Accuracy and prediction on new data #######
 
 # Load the separate test data set
-test_data_df = pd.read_csv("sales_data_test_scaled.csv")
+#test_data_df = pd.read_csv("sales_data_test_scaled.csv")
 
-X_test = test_data_df.drop('total_earnings', axis=1).values
-Y_test = test_data_df[['total_earnings']].values
+#X_test = test_data_df.drop('total_earnings', axis=1).values
+#Y_test = test_data_df[['total_earnings']].values
 
 test_error_rate = model.evaluate(X_test, 
-                                 Y_test, 
+                                 y_test, 
+                                 verbose=0)
+print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
+
+test_error_rate = model.evaluate(X_test, 
+                                 y_test, 
                                  verbose=0)
 print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
 
