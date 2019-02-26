@@ -10,12 +10,12 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 02/22/2019
+#DATE MODIFIED: 02/27/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
 #
-#COMMIT: initial commit
+#COMMIT: adding input parameters and some clean up
 #
 #################################################################################################
 	
@@ -86,7 +86,7 @@ out_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/AAG/deeplearning/lan
 #ARGS 3:
 create_out_dir=True #create a new ouput dir if TRUE
 #ARGS 7
-out_suffix = "deep_learning_houston_LUCC_02152019" #output suffix for the files and ouptut folder
+out_suffix = "deep_learning_houston_LUCC_02272019" #output suffix for the files and ouptut folder
 #ARGS 8
 NA_value = -9999 # number of cores
 file_format = ".tif"
@@ -95,7 +95,9 @@ file_format = ".tif"
 CRS_reg = "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 method_proj_val = "bilinear" # method option for the reprojection and resampling
 gdal_installed = True #if TRUE, GDAL is used to generate distance files
-		
+prop = 0.3 # proportion used for training
+random_seed = 100
+
 ### Input data files
 #rastername_county_harris = "harris_county_mask.tif" #Region of interest: extent of Harris County
 #elevation_fname = "srtm_Houston_area_90m.tif" #SRTM elevation
@@ -130,7 +132,6 @@ else:
     os.chdir(create_out_dir) #use working dir defined earlier
     
     
-
 ###########################################
 ### PART I: READ AND VISUALIZE DATA #######
 	
@@ -145,32 +146,14 @@ data_df.columns
 ###########################################
 ### PART 2: Split test and train, rescaling #######
 
-## Split training and testing
-selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
-selected_target_names = ['change'] #also called dependent variable
-#from sklearn.cross_validation import train_test_split
-from sklearn.model_selection import train_test_split
-
-#X_train, X_test, y_train, y_test = train_test_split(X=data_df[selected_covariates_names].values, 
-#                                                    y=data_df[selected_target_names].values, 
-#                                                    test_size=0.30, 
-#                                                    random_state=100)
-
-X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names], 
-                                                    data_df[selected_target_names], 
-                                                    test_size=0.30, 
-                                                    random_state=100)
-
-X_train.shape
-
-#### Scaling
 
 from sklearn.preprocessing import OneHotEncoder
 enc = OneHotEncoder()
 
 selected_categorical_var_names=['land_cover']
+selected_continuous_var_names=list(set(selected_covariates_names) - set(selected_categorical_var_names))
 
-=data_df.columns.isin(selected_categorical_var_names)
+values_cat = data_df[selected_categorical_var_names].values #note this is assuming only one cat val here
 
 test=[[0, 0, 3], [1, 1, 0], [0, 2, 1], [1, 0, 2]]
 enc.fit(test,categories='auto')   
@@ -185,6 +168,34 @@ array([2, 3, 4])
 array([0, 2, 5, 9], dtype=int32)
 >>> enc.transform([[0, 1, 1]]).toarray()
 array([[ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.]])
+
+
+
+
+#
+## Split training and testing
+selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
+selected_target_names = ['change'] #also called dependent variable
+#from sklearn.cross_validation import train_test_split
+
+
+
+
+
+
+
+from sklearn.model_selection import train_test_split
+
+
+X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names], 
+                                                    data_df[selected_target_names], 
+                                                    test_size=prop, 
+                                                    random_state=random_seed)
+
+X_train.shape
+
+#### Scaling
+
 
 from sklearn.preprocessing import MinMaxScaler
 
