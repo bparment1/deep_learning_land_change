@@ -148,34 +148,45 @@ data_df.columns
 
 
 from sklearn.preprocessing import OneHotEncoder
-enc = OneHotEncoder()
+from sklearn.preprocessing import LabelEncoder
+from numpy import array
+
+selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
+selected_target_names = ['change'] #also called dependent variable
 
 selected_categorical_var_names=['land_cover']
 selected_continuous_var_names=list(set(selected_covariates_names) - set(selected_categorical_var_names))
 
-values_cat = data_df[selected_categorical_var_names].values #note this is assuming only one cat val here
+values_cat = array(data_df[selected_categorical_var_names].values) #note this is assuming only one cat val here
 
-test=[[0, 0, 3], [1, 1, 0], [0, 2, 1], [1, 0, 2]]
-enc.fit(test,categories='auto')   
-OneHotEncoder(categorical_features='all', 
-              dtype=<class 
-              'numpy.float64'>,
-   handle_unknown='error', 
-   n_values='auto', sparse=True)
->>> enc.n_values_
-array([2, 3, 4])
->>> enc.feature_indices_
-array([0, 2, 5, 9], dtype=int32)
->>> enc.transform([[0, 1, 1]]).toarray()
-array([[ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.]])
+label_encoder = LabelEncoder() 
+one_hot_encoder = OneHotEncoder(sparse=False)
 
+### First integer encode:
+integer_encoded = label_encoder.fit_transform(values_cat)
+print(integer_encoded)
 
+# Binary encode:
 
+integer_encoded = integer_encoded.reshape(len(integer_encoded),1)
+print(integer_encoded)
 
+onehot_encoded = one_hot_encoder.fit_transform(integer_encoded)
+print(onehot_encoded)
+onehot_encoded.shape
+type(onehot_encoded)
+
+#invert to check value?
+onehot_encoded[0:5,]
+values_cat[0:5,]
+
+inverted = label_encoder.inverse_transform([np.argmax(onehot_encoded[0,:])])
+inverted = label_encoder.inverse_transform([np.argmax(onehot_encoded[1,:])])
+print(inverted)
 #
 ## Split training and testing
-selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
-selected_target_names = ['change'] #also called dependent variable
+#selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
+#selected_target_names = ['change'] #also called dependent variable
 #from sklearn.cross_validation import train_test_split
 
 
