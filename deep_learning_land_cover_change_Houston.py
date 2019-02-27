@@ -207,7 +207,12 @@ onehot_encoded_df.shape
 data_df.shape
 ## Combine back!!
 
-#
+data_df= pd.concat([data_df,onehot_encoded_df],sort=False,axis=1)
+data_df.shape
+data_df.head()
+
+selected_covariates_names_updated = selected_continuous_var_names + names_cat 
+
 ## Split training and testing
 #selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
 #selected_target_names = ['change'] #also called dependent variable
@@ -216,7 +221,11 @@ data_df.shape
 from sklearn.model_selection import train_test_split
 
 
-X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names], 
+#X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names], 
+#                                                    data_df[selected_target_names], 
+#                                                    test_size=prop, 
+#                                                    random_state=random_seed)
+X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names_updated], 
                                                     data_df[selected_target_names], 
                                                     test_size=prop, 
                                                     random_state=random_seed)
@@ -244,13 +253,18 @@ scaler = MinMaxScaler(feature_range=(0, 1))
 #scaled_training = scaler.fit_transform(training_data_df)
 #scaled_testing = scaler.transform(test_data_df)
 
-scaled_training = scaler.fit_transform(X_train)
-scaled_testing = scaler.transform(X_test)
+### need to select only the continuous var:
+scaled_training = scaler.fit_transform(X_train[selected_continuous_var_names])
+scaled_testing = scaler.transform(X_test[selected_continuous_var_names])
 
 type(scaled_training)
 scaled_training.shape
 
-X = scaled_training
+#X = pd.concat([scaled_training,X_train[names_cat]],sort=False,axis=1)
+#Y = pd.concat([scaled_testing,X_test[names_cat]],sort=False,axis=1)
+
+X = pd.DataFrame(X_train[names_cat],scaled_training,columns=names_cat+selected_continuous_var_names)
+Y = pd.DataFrame(X_test[names_cat],scaled_testing,columns=names_cat+selected_continuous_var_names)
 
 # Print out the adjustment that the scaler applied to the total_earnings column of data
 #print("Note: total_earnings values were scaled by multiplying by {:.10f} and adding {:.6f}".format(scaler.scale_[8], scaler.min_[8]))
@@ -258,8 +272,8 @@ X = scaled_training
 # Create new pandas DataFrame objects from the scaled data
 #scaled_training_df = pd.DataFrame(scaled_training, columns=training_data_df.columns.values)
 #scaled_testing_df = pd.DataFrame(scaled_testing, columns=test_data_df.columns.values)
-scaled_training_df = pd.DataFrame(scaled_training, columns=selected_covariates_names)
-scaled_testing_df = pd.DataFrame(scaled_testing, columns=selected_target_names)
+#scaled_training_df = pd.DataFrame(scaled_training, columns=selected_covariates_names)
+#scaled_testing_df = pd.DataFrame(scaled_testing, columns=selected_target_names)
 
 # Save scaled data dataframes to new CSV files
 #scaled_training_df.to_csv("sales_data_training_scaled.csv", index=False)
@@ -271,13 +285,17 @@ scaled_testing_df = pd.DataFrame(scaled_testing, columns=selected_target_names)
 from keras.models import Sequential
 from keras.layers import *
 
+#https://blogs.rstudio.com/tensorflow/posts/2017-12-07-text-classification-with-keras/
+# binary classif see p.72
 #training_data_df = pd.read_csv("sales_data_training_scaled.csv")
 
 #X = training_data_df.drop('total_earnings', axis=1).values
 #Y = training_data_df[['total_earnings']].values
 
-X = X_train # to be replaced by the scaled values
-Y = y_train
+#X = X_train # to be replaced by the scaled values
+#Y = y_train
+
+
 # Define the model
 
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
@@ -287,7 +305,14 @@ model.add(Dense(100, activation='relu'))
 model.add(Dense(50, activation='relu'))
 model.add(Dense(1, activation='linear'))
 model.compile(loss='mean_squared_error', 
-              optimizer='adam')
+              optimizer='adam',
+              metrics=['accuracy'])
+
+#crossentropy measures the distance between probability distributions or in this case between 
+#ground truth distribution  and the predictions
+#model.compile(loss='binary_crossentropy', 
+#              optimizer='rmsprop',
+#              metrics=['accuracy'])
 
 # Train the model: takes about 10 min
 
