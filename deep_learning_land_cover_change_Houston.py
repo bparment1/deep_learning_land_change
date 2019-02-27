@@ -263,8 +263,8 @@ scaled_training.shape
 #X = pd.concat([scaled_training,X_train[names_cat]],sort=False,axis=1)
 #Y = pd.concat([scaled_testing,X_test[names_cat]],sort=False,axis=1)
 
-X = pd.DataFrame(X_train[names_cat],scaled_training,columns=names_cat+selected_continuous_var_names)
-Y = pd.DataFrame(X_test[names_cat],scaled_testing,columns=names_cat+selected_continuous_var_names)
+X_training_df = pd.DataFrame(X_train[names_cat].values,scaled_training,columns=names_cat+selected_continuous_var_names)
+X_testing_df = pd.DataFrame(X_test[names_cat],scaled_testing,columns=names_cat+selected_continuous_var_names)
 
 # Print out the adjustment that the scaler applied to the total_earnings column of data
 #print("Note: total_earnings values were scaled by multiplying by {:.10f} and adding {:.6f}".format(scaler.scale_[8], scaler.min_[8]))
@@ -295,18 +295,39 @@ from keras.layers import *
 #X = X_train # to be replaced by the scaled values
 #Y = y_train
 
+X = X_training_df.values
+Y = y_train #.values
 
 # Define the model
 
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
 model = Sequential()
-model.add(Dense(50, input_dim=4, activation='relu'))
+#model.add(Dense(50, input_dim=4, activation='relu'))
+model.add(Dense(20, input_dim=9, activation='relu'))
+model.add(Dense(40, activation='relu'))
+model.add(Dense(20, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='mean_squared_error', 
+              optimizer='rmsprop')
+
+model2 = Sequential()
+#model.add(Dense(50, input_dim=4, activation='relu'))
+model2.add(Dense(50, input_dim=4, activation='relu'))
 model.add(Dense(100, activation='relu'))
 model.add(Dense(50, activation='relu'))
 model.add(Dense(1, activation='linear'))
 model.compile(loss='mean_squared_error', 
               optimizer='adam',
               metrics=['accuracy'])
+
+
+history2 = model2.fit(
+    X,
+    Y,
+    epochs=50,
+    shuffle=True,
+    verbose=2
+)
 
 #crossentropy measures the distance between probability distributions or in this case between 
 #ground truth distribution  and the predictions
