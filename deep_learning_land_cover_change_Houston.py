@@ -157,6 +157,9 @@ selected_target_names = ['change'] #also called dependent variable
 selected_categorical_var_names=['land_cover']
 selected_continuous_var_names=list(set(selected_covariates_names) - set(selected_categorical_var_names))
 
+##Find frequency of unique values:
+freq_val_df = data_df[selected_categorical_var_names].apply(pd.value_counts)
+
 values_cat = array(data_df[selected_categorical_var_names].values) #note this is assuming only one cat val here
 
 label_encoder = LabelEncoder() 
@@ -183,17 +186,32 @@ values_cat[0:5,]
 inverted = label_encoder.inverse_transform([np.argmax(onehot_encoded[0,:])])
 inverted = label_encoder.inverse_transform([np.argmax(onehot_encoded[1,:])])
 print(inverted)
+
+#assign back to the data.frame
+
+unique_val = np.array(freq_val_df.index)
+unique_val = np.sort(unique_val)
+
+print(unique_val)
+names_cat = 'lc_'.join(str(unique_val))
+names_cat = 'lc_'.join(str(unique_val))
+names_cat = ['lc3','lc4','lc5','lc7','lc8','lc9']
+
+print(names_cat)
+onehot_encoded_df = pd.DataFrame(onehot_encoded,columns=names_cat)
+onehot_encoded_df = pd.DataFrame(onehot_encoded)
+onehot_encoded_df.columns
+onehot_encoded_df.head()
+#onehot_encoded_df.columns = names_cat
+onehot_encoded_df.shape
+data_df.shape
+## Combine back!!
+
 #
 ## Split training and testing
 #selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
 #selected_target_names = ['change'] #also called dependent variable
 #from sklearn.cross_validation import train_test_split
-
-
-
-
-
-
 
 from sklearn.model_selection import train_test_split
 
@@ -272,7 +290,8 @@ model.compile(loss='mean_squared_error',
               optimizer='adam')
 
 # Train the model: takes about 10 min
-model.fit(
+
+history = model.fit(
     X,
     Y,
     epochs=50,
@@ -280,16 +299,28 @@ model.fit(
     verbose=2
 )
 
+### Note you should add a validation dataset!!!
+##See book p.89 Deep learning with python
 
+#num_epochs = 50
+#history = model.fit(
+#    partial_train_data,
+#    partial_train_target,
+#    validation_data=(val_data,val_targets)
+#    epochs=num_epochs,
+#    batch_size=1,
+#    verbose=0)
+#)
+
+history.history['val_mean_absolute_error']
 model.history.epoch # epoch
 model.history.history.loss
-
-
 
 
 ###########################################
 ### PART 4: Accuracy and prediction on new data #######
 
+# See page 81 Deep Learning book
 # Load the separate test data set
 #test_data_df = pd.read_csv("sales_data_test_scaled.csv")
 
@@ -326,21 +357,7 @@ print("Earnings Prediction for Proposed Product - ${}".format(prediction))
 
 
 
-###################### END OF SCRIPT #####################
-
->>> from sklearn.preprocessing import OneHotEncoder
->>> enc = OneHotEncoder()
->>> enc.fit([[0, 0, 3], [1, 1, 0], [0, 2, 1], [1, 0, 2]])   
-OneHotEncoder(categorical_features='all', dtype=<class 'numpy.float64'>,
-   handle_unknown='error', n_values='auto', sparse=True)
->>> enc.n_values_
-array([2, 3, 4])
->>> enc.feature_indices_
-array([0, 2, 5, 9], dtype=int32)
->>> enc.transform([[0, 1, 1]]).toarray()
-array([[ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.]])
-
-
+##########################   END OF SCRIPT   ##################################
 
 
 
