@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 02/27/2019
+#DATE MODIFIED: 03/01/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -58,21 +58,6 @@ def create_dir_and_check_existence(path):
     except:
         print ("directory already exists")
 
-def open_image(url):
-    image_data = open_http_query(url)
-    
-    if not image_data:
-            return None
-            
-    mmap_name = "/vsimem/"+uuid4().get_hex()
-    gdal.FileFromMemBuffer(mmap_name, image_data.read())
-    gdal_dataset = gdal.Open(mmap_name)
-    image = gdal_dataset.GetRasterBand(1).ReadAsArray()
-    gdal_dataset = None
-    gdal.Unlink(mmap_name)
-    
-    return image
-
 ############################################################################
 #####  Parameters and argument set up ########### 
 
@@ -96,7 +81,13 @@ CRS_reg = "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 
 method_proj_val = "bilinear" # method option for the reprojection and resampling
 gdal_installed = True #if TRUE, GDAL is used to generate distance files
 prop = 0.3 # proportion used for training
-random_seed = 100
+random_seed = 100 #sampling random seed
+
+## Relevant variables used:
+selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
+selected_target_names = ['change'] #also called dependent variable
+
+selected_categorical_var_names=['land_cover']
 
 ### Input data files
 #rastername_county_harris = "harris_county_mask.tif" #Region of interest: extent of Harris County
@@ -114,6 +105,7 @@ l_dir = map(lambda x: os.path.join(out_dir,os.path.basename(x)),l_dir) #set the 
 	
 ### Aggreagate NLCD input files
 infile_land_cover_date1 = "agg_3_r_nlcd2001_Houston.tif"
+data_fname = 'r_variables_harris_county_exercise4_02072019.txt'
 	
 ################# START SCRIPT ###############################
 
@@ -137,8 +129,6 @@ else:
 	
 infile_land_cover_date1 = os.path.join(in_dir,infile_land_cover_date1) #NLCD 2001
 
-data_fname = 'r_variables_harris_county_exercise4_02072019.txt'
-
 #data_df = pd.read_table(os.path.join(in_dir,data_fname))
 data_df = pd.read_csv(os.path.join(in_dir,data_fname))
 data_df.columns
@@ -146,19 +136,14 @@ data_df.columns
 ###########################################
 ### PART 2: Split test and train, rescaling #######
 
-
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import LabelEncoder
 from numpy import array
 
-selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
-selected_target_names = ['change'] #also called dependent variable
-
-selected_categorical_var_names=['land_cover']
 selected_continuous_var_names=list(set(selected_covariates_names) - set(selected_categorical_var_names))
-
 ##Find frequency of unique values:
 freq_val_df = data_df[selected_categorical_var_names].apply(pd.value_counts)
+print(freq_val_df.head())
 
 values_cat = array(data_df[selected_categorical_var_names].values) #note this is assuming only one cat val here
 
@@ -193,13 +178,23 @@ unique_val = np.array(freq_val_df.index)
 unique_val = np.sort(unique_val)
 
 print(unique_val)
-names_cat = 'lc_'.join(str(unique_val))
-names_cat = 'lc_'.join(str(unique_val))
-names_cat = ['lc3','lc4','lc5','lc7','lc8','lc9']
+#string_val = ['lc']*len(unique_val)
+#names_cat = 'lc_'.join(str(unique_val))
+#names_cat = 'lc_'.join(str(unique_val))
+
+#names_cat = map(lambda x: 'lc_'+str(x),unique_val) #remmove extension
+names_cat = ['lc_' + str(i) for i in unique_val]
+#names_cat = map(lambda x: .join('lc_', str(x))) #remmove extension
+#names_cat = map(lambda x: 'lc_'+str(x),unique_val) #remmove extension
+#names_cat = map(lambda x,y: string_val+str(x)) #remmove extension
+
+#l_dir = map(lambda x: os.path.join(out_dir,os.path.basename(x)),l_dir) #set the directory output
+
+#names_cat = ['lc3','lc4','lc5','lc7','lc8','lc9']
 
 print(names_cat)
 onehot_encoded_df = pd.DataFrame(onehot_encoded,columns=names_cat)
-onehot_encoded_df = pd.DataFrame(onehot_encoded)
+#onehot_encoded_df = pd.DataFrame(onehot_encoded)
 onehot_encoded_df.columns
 onehot_encoded_df.head()
 #onehot_encoded_df.columns = names_cat
@@ -214,17 +209,9 @@ data_df.head()
 selected_covariates_names_updated = selected_continuous_var_names + names_cat 
 
 ## Split training and testing
-#selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
-#selected_target_names = ['change'] #also called dependent variable
-#from sklearn.cross_validation import train_test_split
 
 from sklearn.model_selection import train_test_split
 
-
-#X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names], 
-#                                                    data_df[selected_target_names], 
-#                                                    test_size=prop, 
-#                                                    random_state=random_seed)
 X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names_updated], 
                                                     data_df[selected_target_names], 
                                                     test_size=prop, 
@@ -232,16 +219,10 @@ X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_
 
 X_train.shape
 
-#### Scaling
+#### Scaling between 0-1 for continuous variables
 
 
 from sklearn.preprocessing import MinMaxScaler
-
-# Load training data set from CSV file
-#training_data_df = pd.read_csv("sales_data_training.csv")
-
-# Load testing data set from CSV file
-#test_data_df = pd.read_csv("sales_data_test.csv")
 
 # Data needs to be scaled to a small range like 0 to 1 for the neural
 # network to work well.
@@ -257,25 +238,22 @@ scaler = MinMaxScaler(feature_range=(0, 1))
 scaled_training = scaler.fit_transform(X_train[selected_continuous_var_names])
 scaled_testing = scaler.transform(X_test[selected_continuous_var_names])
 
-type(scaled_training)
+type(scaled_training) # array
 scaled_training.shape
 
 #X = pd.concat([scaled_training,X_train[names_cat]],sort=False,axis=1)
 #Y = pd.concat([scaled_testing,X_test[names_cat]],sort=False,axis=1)
 
-X_training_df = pd.DataFrame(X_train[names_cat].values,scaled_training,columns=names_cat+selected_continuous_var_names)
-X_testing_df = pd.DataFrame(X_test[names_cat],scaled_testing,columns=names_cat+selected_continuous_var_names)
+## Concatenate column-wise
+X_testing_df = pd.DataFrame(np.concatenate((X_test[names_cat].values,scaled_testing),axis=1),
+                                            columns=names_cat+selected_continuous_var_names)
+
+X_training_df = pd.DataFrame(np.concatenate((X_train[names_cat].values,scaled_training),axis=1),
+                                            columns=names_cat+selected_continuous_var_names)
 
 # Print out the adjustment that the scaler applied to the total_earnings column of data
 #print("Note: total_earnings values were scaled by multiplying by {:.10f} and adding {:.6f}".format(scaler.scale_[8], scaler.min_[8]))
 
-# Create new pandas DataFrame objects from the scaled data
-#scaled_training_df = pd.DataFrame(scaled_training, columns=training_data_df.columns.values)
-#scaled_testing_df = pd.DataFrame(scaled_testing, columns=test_data_df.columns.values)
-#scaled_training_df = pd.DataFrame(scaled_training, columns=selected_covariates_names)
-#scaled_testing_df = pd.DataFrame(scaled_testing, columns=selected_target_names)
-
-# Save scaled data dataframes to new CSV files
 #scaled_training_df.to_csv("sales_data_training_scaled.csv", index=False)
 #scaled_testing_df.to_csv("sales_data_testing_scaled.csv", index=False)
 
@@ -312,15 +290,22 @@ model.compile(loss='mean_squared_error',
 
 model2 = Sequential()
 #model.add(Dense(50, input_dim=4, activation='relu'))
-model2.add(Dense(50, input_dim=4, activation='relu'))
-model.add(Dense(100, activation='relu'))
-model.add(Dense(50, activation='relu'))
-model.add(Dense(1, activation='linear'))
-model.compile(loss='mean_squared_error', 
-              optimizer='adam',
+model2.add(Dense(50, input_dim=9, activation='relu'))
+model2.add(Dense(100, activation='relu'))
+model2.add(Dense(50, activation='relu'))
+model2.add(Dense(1, activation='sigmoid'))
+#model.compile(loss='binary_crossentropy', 
+#              optimizer='adam',
+#              metrics=['accuracy'])
+
+model2.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
+              optimizer='rmsprop',
               metrics=['accuracy'])
+#In general the lower the crossentropy, the higher the AUC
 
-
+#crossentropy measures the distance between probability distributions or in this case between 
+#ground truth distribution  and the predictions
+              
 history2 = model2.fit(
     X,
     Y,
@@ -328,12 +313,6 @@ history2 = model2.fit(
     shuffle=True,
     verbose=2
 )
-
-#crossentropy measures the distance between probability distributions or in this case between 
-#ground truth distribution  and the predictions
-#model.compile(loss='binary_crossentropy', 
-#              optimizer='rmsprop',
-#              metrics=['accuracy'])
 
 # Train the model: takes about 10 min
 
@@ -358,50 +337,69 @@ history = model.fit(
 #    verbose=0)
 #)
 
-history.history['val_mean_absolute_error']
-model.history.epoch # epoch
-model.history.history.loss
+epoch_step = np.arange(1,51,1)
 
+type(history2.history) # this is a dictionary
+history2.history['acc']
+history2.history['loss']
+history2.epoch
+
+#test=pd.DataFrame(np.array((epoch_step,history2.history['acc'],history2.history['loss'])).T)
+test=pd.DataFrame({'epoch':epoch_step,
+                   'acc':history2.history['acc'],
+                   'loss':history2.history['loss']})
+
+test.shape
+test.head()
+#history.history['val_mean_absolute_error']
+#model.history.epoch # epoch
+#model.history.history.loss
+
+plt.plot(test['epoch'],test['acc'])
+#plt.plot(test['acc'])
+ 
+# multiple line plot
+plt.plot( 'epoch', 'acc', 
+         data=test, 
+         marker='o', markerfacecolor='blue', 
+         markersize=12, 
+         color='skyblue', linewidth=4)
+plt.plot( 'epoch', 'loss', 
+         data=test, 
+         marker='', 
+         color='olive', linewidth=2)
+
+plt.plot( 'x', 'y3', data=df, 
+         marker='', color='olive', 
+         linewidth=2, linestyle='dashed', label="toto")
+plt.legend()
 
 ###########################################
 ### PART 4: Accuracy and prediction on new data #######
 
 # See page 81 Deep Learning book
-# Load the separate test data set
-#test_data_df = pd.read_csv("sales_data_test_scaled.csv")
 
-#X_test = test_data_df.drop('total_earnings', axis=1).values
-#Y_test = test_data_df[['total_earnings']].values
-
-test_error_rate = model.evaluate(X_test, 
-                                 y_test, 
-                                 verbose=0)
-print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
-
-test_error_rate = model.evaluate(X_test, 
+test_error_rate = model2.evaluate(X_test, 
                                  y_test, 
                                  verbose=0)
 print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
 
 
 # Load the data we make to use to make a prediction
-X = pd.read_csv("proposed_new_product.csv").values
+#X = pd.read_csv("proposed_new_product.csv").values
 
 # Make a prediction with the neural network
-prediction = model.predict(X)
+#prediction = model.predict(X)
 
 # Grab just the first element of the first prediction (since that's the only have one)
-prediction = prediction[0][0]
+#prediction = prediction[0][0]
 
 # Re-scale the data from the 0-to-1 range back to dollars
 # These constants are from when the data was originally scaled down to the 0-to-1 range
-prediction = prediction + 0.1159
-prediction = prediction / 0.0000036968
+#prediction = prediction + 0.1159
+#prediction = prediction / 0.0000036968
 
-print("Earnings Prediction for Proposed Product - ${}".format(prediction))
-
-
-
+#print("Earnings Prediction for Proposed Product - ${}".format(prediction))
 
 ##########################   END OF SCRIPT   ##################################
 
