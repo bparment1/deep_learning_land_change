@@ -378,10 +378,26 @@ plt.plot( 'epoch', 'loss',
          marker='', 
          color='olive', linewidth=2)
 
-plt.plot( 'x', 'y3', data=df, 
-         marker='', color='olive', 
-         linewidth=2, linestyle='dashed', label="toto")
-plt.legend()
+#plt.plot( 'x', 'y3', data=df, 
+#         marker='', color='olive', 
+#         linewidth=2, linestyle='dashed', label="toto")
+#plt.legend()
+
+##################################
+### logistic model
+from sklearn.datasets import load_iris
+from sklearn.linear_model import LogisticRegression
+#X, y = load_iris(return_X_y=True)
+#clf = LogisticRegression(random_state=0, solver='lbfgs',
+#                          multi_class='multinomial').fit(X, y)
+model_logistic = LogisticRegression(solver='lbfgs')
+
+model_logistic.fit(X_train,y_train)
+
+pred_test = model_logistic.predict(X_test)
+#pred_test = model_logistic.predict(X_test)
+
+model_logistic.score(pred_test,y_test)
 
 ###########################################
 ### PART 4: Accuracy and prediction on new data #######
