@@ -279,20 +279,28 @@ Y = y_train #.values
 # Define the model
 
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
-model = Sequential()
-#model.add(Dense(50, input_dim=4, activation='relu'))
-model.add(Dense(20, input_dim=9, activation='relu'))
-model.add(Dense(40, activation='relu'))
-model.add(Dense(20, activation='relu'))
-model.add(Dense(1, activation='sigmoid'))
-model.compile(loss='mean_squared_error', 
-              optimizer='rmsprop')
+model1 = Sequential()
 
+#### Test with less number of input nodes: pruning
+model1 = Sequential()
+model1.add(Dense(50, input_dim=9, activation='relu'))
+model1.add(Dense(100, activation='relu'))
+model1.add(Dense(50, activation='relu'))
+model1.add(Dense(1, activation='sigmoid'))
+#model.compile(loss='binary_crossentropy', 
+#              optimizer='adam',
+#              metrics=['accuracy'])
+
+model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
+              optimizer='rmsprop',
+              metrics=['accuracy'])
+
+
+#### Test with less number of input nodes: pruning
 model2 = Sequential()
-#model.add(Dense(50, input_dim=4, activation='relu'))
-model2.add(Dense(50, input_dim=9, activation='relu'))
-model2.add(Dense(100, activation='relu'))
+model2.add(Dense(25, input_dim=9, activation='relu'))
 model2.add(Dense(50, activation='relu'))
+model2.add(Dense(25, activation='relu'))
 model2.add(Dense(1, activation='sigmoid'))
 #model.compile(loss='binary_crossentropy', 
 #              optimizer='adam',
@@ -301,12 +309,13 @@ model2.add(Dense(1, activation='sigmoid'))
 model2.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
               metrics=['accuracy'])
+
 #In general the lower the crossentropy, the higher the AUC
 
 #crossentropy measures the distance between probability distributions or in this case between 
 #ground truth distribution  and the predictions
               
-history2 = model2.fit(
+history1 = model1.fit(
     X,
     Y,
     epochs=50,
@@ -316,7 +325,7 @@ history2 = model2.fit(
 
 # Train the model: takes about 10 min
 
-history = model.fit(
+history2 = model2.fit(
     X,
     Y,
     epochs=50,
@@ -339,15 +348,15 @@ history = model.fit(
 
 epoch_step = np.arange(1,51,1)
 
-type(history2.history) # this is a dictionary
-history2.history['acc']
-history2.history['loss']
-history2.epoch
+type(history1.history) # this is a dictionary
+history1.history['acc']
+history1.history['loss']
+history1.epoch
 
 #test=pd.DataFrame(np.array((epoch_step,history2.history['acc'],history2.history['loss'])).T)
 test=pd.DataFrame({'epoch':epoch_step,
-                   'acc':history2.history['acc'],
-                   'loss':history2.history['loss']})
+                   'acc':history1.history['acc'],
+                   'loss':history1.history['loss']})
 
 test.shape
 test.head()
