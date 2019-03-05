@@ -287,19 +287,21 @@ model1.add(Dense(50, input_dim=9, activation='relu'))
 model1.add(Dense(100, activation='relu'))
 model1.add(Dense(50, activation='relu'))
 model1.add(Dense(1, activation='sigmoid'))
+#model1.add(Dense(1, activation='softmax'))
+
 #model.compile(loss='binary_crossentropy', 
 #              optimizer='adam',
 #              metrics=['accuracy'])
 
 model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
-              metrics=['accuracy'])
+             metrics=['accuracy'])
 
 
 #### Test with less number of input nodes: pruning
 model2 = Sequential()
 model2.add(Dense(25, input_dim=9, activation='relu'))
-model2.add(Dense(50, activation='relu'))
+model2.add(Dense(50, activation='relu')) 
 model2.add(Dense(25, activation='relu'))
 model2.add(Dense(1, activation='sigmoid'))
 #model.compile(loss='binary_crossentropy', 
@@ -387,28 +389,59 @@ plt.plot( 'epoch', 'loss',
 ### logistic model
 from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
-#X, y = load_iris(return_X_y=True)
-#clf = LogisticRegression(random_state=0, solver='lbfgs',
-#                          multi_class='multinomial').fit(X, y)
-model_logistic = LogisticRegression(solver='lbfgs')
+X, y = load_iris(return_X_y=True)
+clf = LogisticRegression(random_state=0, solver='lbfgs',
+                          multi_class='multinomial').fit(X, y)
+model_logistic = LogisticRegression()
 
-model_logistic.fit(X_train,y_train)
+mod = model_logistic.fit(X_train.values,y_train.values.ravel())
 
-pred_test = model_logistic.predict(X_test)
+#/usr/local/lib/python3.5/dist-packages/sklearn/utils/validation.py:761: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+#  y = column_or_1d(y, warn=True)
+#Out[103]: 
+#LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+#          intercept_scaling=1, max_iter=100, multi_class='warn',
+#          n_jobs=None, penalty='l2', random_state=None, solver='lbfgs',
+#          tol=0.0001, verbose=0, warm_start=False)
+
+
+#model_logistic.fit(X_train.values,y_train.values)
+#yy=y_train.values.reshape(y_train.shape[0],1)
+#model_logistic.fit(X_train.values,yy)
+
+
+pred_test = model_logistic.predict(X_test.values)
+pred_test_prob = model_logistic.predict_proba(X_test.values)
+
+pred_test_prob[:,1] # this is the prob for 1
+y_test[0:5]
+pred_test_prob[0:5,:]
+
 #pred_test = model_logistic.predict(X_test)
 
 model_logistic.score(pred_test,y_test)
+pred_test = model_logistic.predict_proba(X_test.values)
+
+from sklearn.metrics import roc_auc_score
+
+y_true = y_test
+y_scores = pred_test_prob[:,1]
+roc_auc_score(y_true,y_scores)
+
+#https://towardsdatascience.com/building-a-logistic-regression-in-python-301d27367c24
+#https://towardsdatascience.com/building-a-logistic-regression-in-python-step-by-step-becd4d56c9c8
 
 ###########################################
 ### PART 4: Accuracy and prediction on new data #######
 
 # See page 81 Deep Learning book
 
-test_error_rate = model2.evaluate(X_test, 
+test_error_rate = model1.evaluate(X_test, 
                                  y_test, 
                                  verbose=0)
 print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
 
+tt=model1.predict_proba(X_test.values)
 
 # Load the data we make to use to make a prediction
 #X = pd.read_csv("proposed_new_product.csv").values
