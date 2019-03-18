@@ -250,6 +250,16 @@ class_weight = {0: 0.25,
 
 # Define the model
 
+### TRy down sampling:
+train_dat = y_train
+
+train_dat_1s = train_dat[train_dat['change'] == 1]
+
+train_dat_0s = train_dat[train_dat['change'] == 0]
+keep_0s = train_dat_0s.sample(frac=train_dat_1s.shape[0]/train_dat_0s.shape[0])
+
+train_dat = pd.concat([keep_0s,train_dat_1s],axis=0)
+
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
 #### Test with less number of input nodes: pruning
 model1 = Sequential()
@@ -378,7 +388,7 @@ clf = LogisticRegression(random_state=0, solver='lbfgs',
                           multi_class='multinomial').fit(X, y)
 model_logistic = LogisticRegression()
 
-mod = model_logistic.fit(X_train.values,y_train.values.ravel())
+model_logistic = model_logistic.fit(X_train.values,y_train.values.ravel())
 
 #/usr/local/lib/python3.5/dist-packages/sklearn/utils/validation.py:761: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
 #  y = column_or_1d(y, warn=True)
@@ -393,9 +403,11 @@ mod = model_logistic.fit(X_train.values,y_train.values.ravel())
 #yy=y_train.values.reshape(y_train.shape[0],1)
 #model_logistic.fit(X_train.values,yy)
 
-
 pred_test = model_logistic.predict(X_test.values)
 pred_test_prob = model_logistic.predict_proba(X_test.values)
+
+#Note:
+sum(pred_test)
 
 pred_test_prob[:,1] # this is the prob for 1
 y_test[0:5]
@@ -425,11 +437,24 @@ test_error_rate = model1.evaluate(X_test,
                                  verbose=0)
 print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
 
-tt=model1.predict_proba(X_test.values)
+#https://www.dlology.com/blog/simple-guide-on-how-to-generate-roc-plot-for-keras-classifier/
+
+from keras.wrappers.scikit_learn import KerasClassifier
+
+tt1_test1=model1.predict_proba(X_test.values)
+tt1_test2=model1.predict(X_test.values)
+
+
 from sklearn.metrics import roc_curve
 y_pred_keras = model1.predict(X_test.values).ravel()
 
 fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test, y_pred_keras)
+from sklearn.metrics import auc
+auc_keras = auc(fpr_keras, tpr_keras)
+
+from sklearn.metrics import roc_auc_score
+
+roc_auc_score(y_test,y_pred_keras)
 
 # Load the data we make to use to make a prediction
 #X = pd.read_csv("proposed_new_product.csv").values
