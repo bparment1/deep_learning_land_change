@@ -240,6 +240,14 @@ from keras.layers import *
 X = X_training_df.values
 Y = y_train #.values
 
+#import keras
+
+class_weight = {0: 0.25,
+                1: 0.75}
+#model.fit(X_train, Y_train, epochs=10, 
+#          batch_size=32, class_weight=class_weight)
+
+
 # Define the model
 
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
@@ -272,16 +280,36 @@ model2.compile(loss='binary_crossentropy', #crossentropy can be optimized and is
 
 #crossentropy measures the distance between probability distributions or in this case between 
 #ground truth distribution  and the predictions
+
+history1_no_weight = model1.fit(
+    X,
+    Y,
+    epochs=50,
+    shuffle=True,
+    verbose=2,
+#    class_weight=class_weight
+)
               
 history1 = model1.fit(
     X,
     Y,
     epochs=50,
     shuffle=True,
-    verbose=2
+    verbose=2,
+    class_weight=class_weight
 )
 
+#https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
 # Train the model: takes about 10 min
+from keras import backend as K
+
+inp = model1.input                                           # input placeholder
+outputs = [layer.output for layer in model1.layers]          # all layer outputs
+functors = [K.function([inp, K.learning_phase()], [out])
+
+You can easily get the outputs of any layer by using: 
+index=1
+lay_4 = model1.layers[index].output
 
 history2 = model2.fit(
     X,
@@ -398,6 +426,10 @@ test_error_rate = model1.evaluate(X_test,
 print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
 
 tt=model1.predict_proba(X_test.values)
+from sklearn.metrics import roc_curve
+y_pred_keras = model1.predict(X_test.values).ravel()
+
+fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test, y_pred_keras)
 
 # Load the data we make to use to make a prediction
 #X = pd.read_csv("proposed_new_product.csv").values
