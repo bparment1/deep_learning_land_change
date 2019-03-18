@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 03/01/2019
+#DATE MODIFIED: 03/18/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -71,7 +71,7 @@ out_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/AAG/deeplearning/lan
 #ARGS 3:
 create_out_dir=True #create a new ouput dir if TRUE
 #ARGS 7
-out_suffix = "deep_learning_houston_LUCC_02272019" #output suffix for the files and ouptut folder
+out_suffix = "deep_learning_houston_LUCC_03182019" #output suffix for the files and ouptut folder
 #ARGS 8
 NA_value = -9999 # number of cores
 file_format = ".tif"
@@ -94,7 +94,7 @@ selected_categorical_var_names=['land_cover']
 #elevation_fname = "srtm_Houston_area_90m.tif" #SRTM elevation
 #roads_fname = "r_roads_Harris.tif" #Road count for Harris county
 
-# -12 layers from land cover concensus (Jetz lab)
+# Raster variables 
 fileglob = "*.tif"
 pathglob = os.path.join(in_dir, fileglob)
 l_f = glob.glob(pathglob)
@@ -105,6 +105,7 @@ l_dir = map(lambda x: os.path.join(out_dir,os.path.basename(x)),l_dir) #set the 
 	
 ### Aggreagate NLCD input files
 infile_land_cover_date1 = "agg_3_r_nlcd2001_Houston.tif"
+### dataset as csv
 data_fname = 'r_variables_harris_county_exercise4_02072019.txt'
 	
 ################# START SCRIPT ###############################
@@ -134,7 +135,7 @@ data_df = pd.read_csv(os.path.join(in_dir,data_fname))
 data_df.columns
 
 ###########################################
-### PART 2: Split test and train, rescaling #######
+### PART 2: Split test and train, rescaling and normalization #######
 
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import LabelEncoder
@@ -155,7 +156,6 @@ integer_encoded = label_encoder.fit_transform(values_cat)
 print(integer_encoded)
 
 # Binary encode:
-
 integer_encoded = integer_encoded.reshape(len(integer_encoded),1)
 print(integer_encoded)
 
@@ -178,26 +178,15 @@ unique_val = np.array(freq_val_df.index)
 unique_val = np.sort(unique_val)
 
 print(unique_val)
-#string_val = ['lc']*len(unique_val)
-#names_cat = 'lc_'.join(str(unique_val))
-#names_cat = 'lc_'.join(str(unique_val))
 
 #names_cat = map(lambda x: 'lc_'+str(x),unique_val) #remmove extension
 names_cat = ['lc_' + str(i) for i in unique_val]
-#names_cat = map(lambda x: .join('lc_', str(x))) #remmove extension
-#names_cat = map(lambda x: 'lc_'+str(x),unique_val) #remmove extension
-#names_cat = map(lambda x,y: string_val+str(x)) #remmove extension
-
-#l_dir = map(lambda x: os.path.join(out_dir,os.path.basename(x)),l_dir) #set the directory output
-
-#names_cat = ['lc3','lc4','lc5','lc7','lc8','lc9']
 
 print(names_cat)
-onehot_encoded_df = pd.DataFrame(onehot_encoded,columns=names_cat)
-#onehot_encoded_df = pd.DataFrame(onehot_encoded)
+onehot_encoded_df = pd.DataFrame(onehot_encoded,
+                                 columns=names_cat)
 onehot_encoded_df.columns
 onehot_encoded_df.head()
-#onehot_encoded_df.columns = names_cat
 onehot_encoded_df.shape
 data_df.shape
 ## Combine back!!
@@ -221,19 +210,11 @@ X_train.shape
 
 #### Scaling between 0-1 for continuous variables
 
-
 from sklearn.preprocessing import MinMaxScaler
 
 # Data needs to be scaled to a small range like 0 to 1 for the neural
 # network to work well.
 scaler = MinMaxScaler(feature_range=(0, 1))
-
-##### need to use one hot encoding or text embedding to normalize categorical variables
-#https://dzone.com/articles/artificial-intelligence-a-radical-anti-humanism
-# Scale both the training inputs and outputs
-#scaled_training = scaler.fit_transform(training_data_df)
-#scaled_testing = scaler.transform(test_data_df)
-
 ### need to select only the continuous var:
 scaled_training = scaler.fit_transform(X_train[selected_continuous_var_names])
 scaled_testing = scaler.transform(X_test[selected_continuous_var_names])
@@ -241,21 +222,11 @@ scaled_testing = scaler.transform(X_test[selected_continuous_var_names])
 type(scaled_training) # array
 scaled_training.shape
 
-#X = pd.concat([scaled_training,X_train[names_cat]],sort=False,axis=1)
-#Y = pd.concat([scaled_testing,X_test[names_cat]],sort=False,axis=1)
-
 ## Concatenate column-wise
 X_testing_df = pd.DataFrame(np.concatenate((X_test[names_cat].values,scaled_testing),axis=1),
                                             columns=names_cat+selected_continuous_var_names)
-
 X_training_df = pd.DataFrame(np.concatenate((X_train[names_cat].values,scaled_training),axis=1),
                                             columns=names_cat+selected_continuous_var_names)
-
-# Print out the adjustment that the scaler applied to the total_earnings column of data
-#print("Note: total_earnings values were scaled by multiplying by {:.10f} and adding {:.6f}".format(scaler.scale_[8], scaler.min_[8]))
-
-#scaled_training_df.to_csv("sales_data_training_scaled.csv", index=False)
-#scaled_testing_df.to_csv("sales_data_testing_scaled.csv", index=False)
 
 ###########################################
 ### PART 3: build model and train #######
@@ -265,13 +236,6 @@ from keras.layers import *
 
 #https://blogs.rstudio.com/tensorflow/posts/2017-12-07-text-classification-with-keras/
 # binary classif see p.72
-#training_data_df = pd.read_csv("sales_data_training_scaled.csv")
-
-#X = training_data_df.drop('total_earnings', axis=1).values
-#Y = training_data_df[['total_earnings']].values
-
-#X = X_train # to be replaced by the scaled values
-#Y = y_train
 
 X = X_training_df.values
 Y = y_train #.values
@@ -279,24 +243,16 @@ Y = y_train #.values
 # Define the model
 
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
-model1 = Sequential()
-
 #### Test with less number of input nodes: pruning
 model1 = Sequential()
 model1.add(Dense(50, input_dim=9, activation='relu'))
 model1.add(Dense(100, activation='relu'))
 model1.add(Dense(50, activation='relu'))
 model1.add(Dense(1, activation='sigmoid'))
-#model1.add(Dense(1, activation='softmax'))
-
-#model.compile(loss='binary_crossentropy', 
-#              optimizer='adam',
-#              metrics=['accuracy'])
 
 model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
              metrics=['accuracy'])
-
 
 #### Test with less number of input nodes: pruning
 model2 = Sequential()
