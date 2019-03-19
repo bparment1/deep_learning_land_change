@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 03/18/2019
+#DATE MODIFIED: 03/19/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -251,14 +251,24 @@ class_weight = {0: 0.25,
 # Define the model
 
 ### TRy down sampling:
-train_dat = y_train
+train_dat = pd.DataFrame(np.concatenate((X_training_df.values,y_train.values),axis=1),
+                                            columns=list(X_training_df)+['change'])
+
+#train_dat = y_train
 
 train_dat_1s = train_dat[train_dat['change'] == 1]
 
 train_dat_0s = train_dat[train_dat['change'] == 0]
+prop_observed=train_dat_1s.shape[0]/train_dat_0s.shape[0]
+print(prop_observed)
 keep_0s = train_dat_0s.sample(frac=train_dat_1s.shape[0]/train_dat_0s.shape[0])
 
 train_dat = pd.concat([keep_0s,train_dat_1s],axis=0)
+train_dat.columns
+sum(train_dat.change)/train_dat.shape[0] #50% change and no change
+train_dat.shape #downsampled data
+
+
 
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
 #### Test with less number of input nodes: pruning
@@ -308,6 +318,19 @@ history1 = model1.fit(
     verbose=2,
     class_weight=class_weight
 )
+
+X_down = train_dat.drop(columns=['change'])
+Y_down = train_dat['change']
+
+history1_undersampling = model1.fit(
+    X_down,
+    Y_down,
+    epochs=50,
+    shuffle=True,
+    verbose=2,
+#    class_weight=class_weight
+)
+
 
 #https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
 # Train the model: takes about 10 min
@@ -444,17 +467,31 @@ from keras.wrappers.scikit_learn import KerasClassifier
 tt1_test1=model1.predict_proba(X_test.values)
 tt1_test2=model1.predict(X_test.values)
 
+##### Train values
+from sklearn.metrics import roc_curve
+y_pred_keras = model1.predict(X_down.values).ravel()
+y_true = Y_down
+
+fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_true, y_pred_keras)
+from sklearn.metrics import auc
+auc_keras = auc(fpr_keras, tpr_keras)
+print(auc_keras)
+from sklearn.metrics import roc_auc_score
+roc_auc_score(y_true,y_pred_keras)
+
+######## Test values
 
 from sklearn.metrics import roc_curve
 y_pred_keras = model1.predict(X_test.values).ravel()
+y_true = y_test
 
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_test, y_pred_keras)
+fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_true, y_pred_keras)
 from sklearn.metrics import auc
 auc_keras = auc(fpr_keras, tpr_keras)
-
+print(auc_keras)
 from sklearn.metrics import roc_auc_score
 
-roc_auc_score(y_test,y_pred_keras)
+roc_auc_score(y_true,y_pred_keras)
 
 # Load the data we make to use to make a prediction
 #X = pd.read_csv("proposed_new_product.csv").values
