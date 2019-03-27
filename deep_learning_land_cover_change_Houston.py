@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 03/19/2019
+#DATE MODIFIED: 03/27/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -44,6 +44,11 @@ from collections import OrderedDict
 import webcolors
 import sklearn
 import keras
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import LabelEncoder
+from numpy import array
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
 
 ################ NOW FUNCTIONS  ###################
 
@@ -71,7 +76,7 @@ out_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/AAG/deeplearning/lan
 #ARGS 3:
 create_out_dir=True #create a new ouput dir if TRUE
 #ARGS 7
-out_suffix = "deep_learning_houston_LUCC_03182019" #output suffix for the files and ouptut folder
+out_suffix = "deep_learning_houston_LUCC_02272019" #output suffix for the files and ouptut folder
 #ARGS 8
 NA_value = -9999 # number of cores
 file_format = ".tif"
@@ -94,7 +99,7 @@ selected_categorical_var_names=['land_cover']
 #elevation_fname = "srtm_Houston_area_90m.tif" #SRTM elevation
 #roads_fname = "r_roads_Harris.tif" #Road count for Harris county
 
-# Raster variables 
+# -12 layers from land cover concensus (Jetz lab)
 fileglob = "*.tif"
 pathglob = os.path.join(in_dir, fileglob)
 l_f = glob.glob(pathglob)
@@ -105,7 +110,6 @@ l_dir = map(lambda x: os.path.join(out_dir,os.path.basename(x)),l_dir) #set the 
 	
 ### Aggreagate NLCD input files
 infile_land_cover_date1 = "agg_3_r_nlcd2001_Houston.tif"
-### dataset as csv
 data_fname = 'r_variables_harris_county_exercise4_02072019.txt'
 	
 ################# START SCRIPT ###############################
@@ -130,21 +134,16 @@ else:
 	
 infile_land_cover_date1 = os.path.join(in_dir,infile_land_cover_date1) #NLCD 2001
 
-#data_df = pd.read_table(os.path.join(in_dir,data_fname))
 data_df = pd.read_csv(os.path.join(in_dir,data_fname))
 data_df.columns
 
 ###########################################
-### PART 2: Split test and train, rescaling and normalization #######
-
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import LabelEncoder
-from numpy import array
+### PART 2: Split test and train, rescaling #######
 
 selected_continuous_var_names=list(set(selected_covariates_names) - set(selected_categorical_var_names))
 ##Find frequency of unique values:
 freq_val_df = data_df[selected_categorical_var_names].apply(pd.value_counts)
-print(freq_val_df.head())
+print(freq_val_df)
 
 values_cat = array(data_df[selected_categorical_var_names].values) #note this is assuming only one cat val here
 
@@ -156,6 +155,7 @@ integer_encoded = label_encoder.fit_transform(values_cat)
 print(integer_encoded)
 
 # Binary encode:
+
 integer_encoded = integer_encoded.reshape(len(integer_encoded),1)
 print(integer_encoded)
 
@@ -179,12 +179,10 @@ unique_val = np.sort(unique_val)
 
 print(unique_val)
 
-#names_cat = map(lambda x: 'lc_'+str(x),unique_val) #remmove extension
 names_cat = ['lc_' + str(i) for i in unique_val]
 
 print(names_cat)
-onehot_encoded_df = pd.DataFrame(onehot_encoded,
-                                 columns=names_cat)
+onehot_encoded_df = pd.DataFrame(onehot_encoded,columns=names_cat)
 onehot_encoded_df.columns
 onehot_encoded_df.head()
 onehot_encoded_df.shape
@@ -199,8 +197,6 @@ selected_covariates_names_updated = selected_continuous_var_names + names_cat
 
 ## Split training and testing
 
-from sklearn.model_selection import train_test_split
-
 X_train, X_test, y_train, y_test = train_test_split(data_df[selected_covariates_names_updated], 
                                                     data_df[selected_target_names], 
                                                     test_size=prop, 
@@ -210,11 +206,16 @@ X_train.shape
 
 #### Scaling between 0-1 for continuous variables
 
-from sklearn.preprocessing import MinMaxScaler
-
 # Data needs to be scaled to a small range like 0 to 1 for the neural
 # network to work well.
 scaler = MinMaxScaler(feature_range=(0, 1))
+
+##### need to use one hot encoding or text embedding to normalize categorical variables
+#https://dzone.com/articles/artificial-intelligence-a-radical-anti-humanism
+# Scale both the training inputs and outputs
+#scaled_training = scaler.fit_transform(training_data_df)
+#scaled_testing = scaler.transform(test_data_df)
+
 ### need to select only the continuous var:
 scaled_training = scaler.fit_transform(X_train[selected_continuous_var_names])
 scaled_testing = scaler.transform(X_test[selected_continuous_var_names])
@@ -222,11 +223,21 @@ scaled_testing = scaler.transform(X_test[selected_continuous_var_names])
 type(scaled_training) # array
 scaled_training.shape
 
+#X = pd.concat([scaled_training,X_train[names_cat]],sort=False,axis=1)
+#Y = pd.concat([scaled_testing,X_test[names_cat]],sort=False,axis=1)
+
 ## Concatenate column-wise
 X_testing_df = pd.DataFrame(np.concatenate((X_test[names_cat].values,scaled_testing),axis=1),
                                             columns=names_cat+selected_continuous_var_names)
+
 X_training_df = pd.DataFrame(np.concatenate((X_train[names_cat].values,scaled_training),axis=1),
                                             columns=names_cat+selected_continuous_var_names)
+
+# Print out the adjustment that the scaler applied to the total_earnings column of data
+#print("Note: total_earnings values were scaled by multiplying by {:.10f} and adding {:.6f}".format(scaler.scale_[8], scaler.min_[8]))
+
+#scaled_training_df.to_csv("sales_data_training_scaled.csv", index=False)
+#scaled_testing_df.to_csv("sales_data_testing_scaled.csv", index=False)
 
 ###########################################
 ### PART 3: build model and train #######
@@ -236,51 +247,44 @@ from keras.layers import *
 
 #https://blogs.rstudio.com/tensorflow/posts/2017-12-07-text-classification-with-keras/
 # binary classif see p.72
+#training_data_df = pd.read_csv("sales_data_training_scaled.csv")
+
+#X = training_data_df.drop('total_earnings', axis=1).values
+#Y = training_data_df[['total_earnings']].values
+
+#X = X_train # to be replaced by the scaled values
+#Y = y_train
 
 X = X_training_df.values
 Y = y_train #.values
 
-#import keras
-
-class_weight = {0: 0.25,
-                1: 0.75}
-#model.fit(X_train, Y_train, epochs=10, 
-#          batch_size=32, class_weight=class_weight)
-
-
 # Define the model
-
-### TRy down sampling:
-train_dat = pd.DataFrame(np.concatenate((X_training_df.values,y_train.values),axis=1),
-                                            columns=list(X_training_df)+['change'])
-
-#train_dat = y_train
-
-train_dat_1s = train_dat[train_dat['change'] == 1]
-
-train_dat_0s = train_dat[train_dat['change'] == 0]
-prop_observed=train_dat_1s.shape[0]/train_dat_0s.shape[0]
-print(prop_observed)
-keep_0s = train_dat_0s.sample(frac=train_dat_1s.shape[0]/train_dat_0s.shape[0])
-
-train_dat = pd.concat([keep_0s,train_dat_1s],axis=0)
-train_dat.columns
-sum(train_dat.change)/train_dat.shape[0] #50% change and no change
-train_dat.shape #downsampled data
-
-
 
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
 #### Test with less number of input nodes: pruning
+#model1 = Sequential()
+#model1.add(Dense(50, input_dim=9, activation='relu'))
+#model1.add(Dense(100, activation='relu'))
+#model1.add(Dense(50, activation='relu'))
+#model1.add(Dense(1, activation='sigmoid'))
+#model1.add(Dense(1, activation='softmax'))
+
+
 model1 = Sequential()
-model1.add(Dense(50, input_dim=9, activation='relu'))
-model1.add(Dense(100, activation='relu'))
-model1.add(Dense(50, activation='relu'))
+model1.add(Dense(5, input_dim=9, activation='relu'))
+model1.add(Dense(10, activation='relu'))
+model1.add(Dense(10, activation='relu'))
 model1.add(Dense(1, activation='sigmoid'))
+#model1.add(Dense(1, activation='softmax'))
+
+#model.compile(loss='binary_crossentropy', 
+#              optimizer='adam',
+#              metrics=['accuracy'])
 
 model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
              metrics=['accuracy'])
+
 
 #### Test with less number of input nodes: pruning
 model2 = Sequential()
@@ -300,49 +304,16 @@ model2.compile(loss='binary_crossentropy', #crossentropy can be optimized and is
 
 #crossentropy measures the distance between probability distributions or in this case between 
 #ground truth distribution  and the predictions
-
-history1_no_weight = model1.fit(
-    X,
-    Y,
-    epochs=50,
-    shuffle=True,
-    verbose=2,
-#    class_weight=class_weight
-)
               
 history1 = model1.fit(
     X,
     Y,
     epochs=50,
     shuffle=True,
-    verbose=2,
-    class_weight=class_weight
+    verbose=2
 )
 
-X_down = train_dat.drop(columns=['change'])
-Y_down = train_dat['change']
-
-history1_undersampling = model1.fit(
-    X_down,
-    Y_down,
-    epochs=50,
-    shuffle=True,
-    verbose=2,
-#    class_weight=class_weight
-)
-
-
-#https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
 # Train the model: takes about 10 min
-from keras import backend as K
-
-inp = model1.input                                           # input placeholder
-outputs = [layer.output for layer in model1.layers]          # all layer outputs
-functors = [K.function([inp, K.learning_phase()], [out])
-
-You can easily get the outputs of any layer by using: 
-index=1
-lay_4 = model1.layers[index].output
 
 history2 = model2.fit(
     X,
@@ -413,29 +384,19 @@ model_logistic = LogisticRegression()
 
 model_logistic = model_logistic.fit(X_train.values,y_train.values.ravel())
 
-#/usr/local/lib/python3.5/dist-packages/sklearn/utils/validation.py:761: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
-#  y = column_or_1d(y, warn=True)
-#Out[103]: 
-#LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
-#          intercept_scaling=1, max_iter=100, multi_class='warn',
-#          n_jobs=None, penalty='l2', random_state=None, solver='lbfgs',
-#          tol=0.0001, verbose=0, warm_start=False)
-
-
-#model_logistic.fit(X_train.values,y_train.values)
-#yy=y_train.values.reshape(y_train.shape[0],1)
-#model_logistic.fit(X_train.values,yy)
+model_logistic.coef_
+selected_covariates_names_updated
 
 pred_test = model_logistic.predict(X_test.values)
 pred_test_prob = model_logistic.predict_proba(X_test.values)
-
-#Note:
-sum(pred_test)
 
 pred_test_prob[:,1] # this is the prob for 1
 y_test[0:5]
 pred_test_prob[0:5,:]
 
+predicted_classes = model.predict(X)
+accuracy = accuracy_score(y.flatten(),pred_test)
+parameters = model.coef_
 #pred_test = model_logistic.predict(X_test)
 
 model_logistic.score(pred_test,y_test)
@@ -447,51 +408,56 @@ y_true = y_test
 y_scores = pred_test_prob[:,1]
 roc_auc_score(y_true,y_scores)
 
+### Note that we only have about 10% change in the dataset so setting 50% does not make sense!!
+sum(data_df.change)/data_df.shape[0]
+sum(y_train.change)/y_train.shape[0]
+
 #https://towardsdatascience.com/building-a-logistic-regression-in-python-301d27367c24
+#This is for ROC curve
 #https://towardsdatascience.com/building-a-logistic-regression-in-python-step-by-step-becd4d56c9c8
 
 ###########################################
 ### PART 4: Accuracy and prediction on new data #######
 
-# See page 81 Deep Learning book
+https://stackoverflow.com/questions/50115762/output-probability-score-with-keras-using-model-predict
 
-test_error_rate = model1.evaluate(X_test, 
-                                 y_test, 
-                                 verbose=0)
+from keras import layers
+from keras import models
+from keras import __version__ as used_keras_version
+import numpy as np
+
+
+model = models.Sequential()
+model.add(layers.Dense(5, activation='sigmoid', input_shape=(1,)))
+model.add(layers.Dense(1, activation='sigmoid'))
+print((model.predict(np.random.rand(10))))
+print('Keras version used: {}'.format(used_keras_version))
+
+
+######################
+#Predictions, getting final activiation layer
+
+tt=model1.predict_proba(X_test.values)
+tt.shape
+tt.sum()
+
+model1._predict(X_test.values)
+
+evaluate(X_test, 
+         y_test, 
+         verbose=0)
+         
 print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
 
-#https://www.dlology.com/blog/simple-guide-on-how-to-generate-roc-plot-for-keras-classifier/
 
-from keras.wrappers.scikit_learn import KerasClassifier
+tt=model1.predict_proba(X_test.values)
+tt.shape
+tt.sum()
+tt[0:6,]
+tt.max()
+tt.min()
 
-tt1_test1=model1.predict_proba(X_test.values)
-tt1_test2=model1.predict(X_test.values)
-
-##### Train values
-from sklearn.metrics import roc_curve
-y_pred_keras = model1.predict(X_down.values).ravel()
-y_true = Y_down
-
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_true, y_pred_keras)
-from sklearn.metrics import auc
-auc_keras = auc(fpr_keras, tpr_keras)
-print(auc_keras)
-from sklearn.metrics import roc_auc_score
-roc_auc_score(y_true,y_pred_keras)
-
-######## Test values
-
-from sklearn.metrics import roc_curve
-y_pred_keras = model1.predict(X_test.values).ravel()
-y_true = y_test
-
-fpr_keras, tpr_keras, thresholds_keras = roc_curve(y_true, y_pred_keras)
-from sklearn.metrics import auc
-auc_keras = auc(fpr_keras, tpr_keras)
-print(auc_keras)
-from sklearn.metrics import roc_auc_score
-
-roc_auc_score(y_true,y_pred_keras)
+https://www.dlology.com/blog/simple-guide-on-how-to-generate-roc-plot-for-keras-classifier/
 
 # Load the data we make to use to make a prediction
 #X = pd.read_csv("proposed_new_product.csv").values
@@ -508,6 +474,11 @@ roc_auc_score(y_true,y_pred_keras)
 #prediction = prediction / 0.0000036968
 
 #print("Earnings Prediction for Proposed Product - ${}".format(prediction))
+
+# See page 81 Deep Learning book
+
+#test_error_rate = model
+
 
 ##########################   END OF SCRIPT   ##################################
 
