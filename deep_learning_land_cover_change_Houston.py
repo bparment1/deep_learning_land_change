@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 03/27/2019
+#DATE MODIFIED: 03/28/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -24,6 +24,7 @@ Spyder Editor.
 
 import gdal
 import numpy as np
+from numpy import array
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.colors as colors
@@ -43,12 +44,13 @@ from shapely.geometry import Point
 from collections import OrderedDict
 import webcolors
 import sklearn
-import keras
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import LabelEncoder
-from numpy import array
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
+import keras
+from keras.models import Sequential
+from keras.layers import *
 
 ################ NOW FUNCTIONS  ###################
 
@@ -86,7 +88,7 @@ CRS_reg = "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 
 method_proj_val = "bilinear" # method option for the reprojection and resampling
 gdal_installed = True #if TRUE, GDAL is used to generate distance files
 prop = 0.3 # proportion used for training
-random_seed = 100 #sampling random seed
+random_seed = 10 #sampling random seed
 
 ## Relevant variables used:
 selected_covariates_names = ['land_cover', 'slope', 'roads_dist', 'developped_dist']
@@ -176,7 +178,6 @@ print(inverted)
 
 unique_val = np.array(freq_val_df.index)
 unique_val = np.sort(unique_val)
-
 print(unique_val)
 
 names_cat = ['lc_' + str(i) for i in unique_val]
@@ -209,22 +210,12 @@ X_train.shape
 # Data needs to be scaled to a small range like 0 to 1 for the neural
 # network to work well.
 scaler = MinMaxScaler(feature_range=(0, 1))
-
-##### need to use one hot encoding or text embedding to normalize categorical variables
-#https://dzone.com/articles/artificial-intelligence-a-radical-anti-humanism
-# Scale both the training inputs and outputs
-#scaled_training = scaler.fit_transform(training_data_df)
-#scaled_testing = scaler.transform(test_data_df)
-
 ### need to select only the continuous var:
 scaled_training = scaler.fit_transform(X_train[selected_continuous_var_names])
 scaled_testing = scaler.transform(X_test[selected_continuous_var_names])
 
 type(scaled_training) # array
 scaled_training.shape
-
-#X = pd.concat([scaled_training,X_train[names_cat]],sort=False,axis=1)
-#Y = pd.concat([scaled_testing,X_test[names_cat]],sort=False,axis=1)
 
 ## Concatenate column-wise
 X_testing_df = pd.DataFrame(np.concatenate((X_test[names_cat].values,scaled_testing),axis=1),
@@ -233,32 +224,52 @@ X_testing_df = pd.DataFrame(np.concatenate((X_test[names_cat].values,scaled_test
 X_training_df = pd.DataFrame(np.concatenate((X_train[names_cat].values,scaled_training),axis=1),
                                             columns=names_cat+selected_continuous_var_names)
 
-# Print out the adjustment that the scaler applied to the total_earnings column of data
-#print("Note: total_earnings values were scaled by multiplying by {:.10f} and adding {:.6f}".format(scaler.scale_[8], scaler.min_[8]))
+X_testing_df.to_csv(os.path.join(out_dir,
+                    "X_testing_df_"+out_suffix+".csv"))
 
-#scaled_training_df.to_csv("sales_data_training_scaled.csv", index=False)
-#scaled_testing_df.to_csv("sales_data_testing_scaled.csv", index=False)
+X_training_df.to_csv(os.path.join(out_dir,
+                    "X_training_df_"+out_suffix+".csv"))
 
 ###########################################
 ### PART 3: build model and train #######
 
-from keras.models import Sequential
-from keras.layers import *
-
 #https://blogs.rstudio.com/tensorflow/posts/2017-12-07-text-classification-with-keras/
 # binary classif see p.72
-#training_data_df = pd.read_csv("sales_data_training_scaled.csv")
-
-#X = training_data_df.drop('total_earnings', axis=1).values
-#Y = training_data_df[['total_earnings']].values
-
-#X = X_train # to be replaced by the scaled values
-#Y = y_train
 
 X = X_training_df.values
 Y = y_train #.values
 
+#import keras
+
+class_weight = {0: 0.15,
+                1: 0.85}
+#model.fit(X_train, Y_train, epochs=10, 
+#          batch_size=32, class_weight=class_weight)
+
 # Define the model
+
+### TRy down sampling:
+train_dat = pd.DataFrame(np.concatenate(
+                         (X_training_df.values,y_train.values),axis=1),
+                         columns=list(X_training_df)+['change'])
+
+train_dat_1s = train_dat[train_dat['change'] == 1]
+train_dat_0s = train_dat[train_dat['change'] == 0]
+
+### Proportion of change
+prop_observed=train_dat_1s.shape[0]/train_dat_0s.shape[0]
+print(prop_observed)
+
+###
+keep_0s = train_dat_0s.sample(frac=train_dat_1s.shape[0]/train_dat_0s.shape[0])
+keep_0s = train_dat_0s.sample(frac=prop_observed,
+                              random_state=random_seed)
+
+
+train_dat = pd.concat([keep_0s,train_dat_1s],axis=0)
+train_dat.columns
+sum(train_dat.change)/train_dat.shape[0] #50% change and no change
+train_dat.shape #downsampled data
 
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
 #### Test with less number of input nodes: pruning
@@ -268,7 +279,6 @@ Y = y_train #.values
 #model1.add(Dense(50, activation='relu'))
 #model1.add(Dense(1, activation='sigmoid'))
 #model1.add(Dense(1, activation='softmax'))
-
 
 model1 = Sequential()
 model1.add(Dense(5, input_dim=9, activation='relu'))
@@ -284,7 +294,6 @@ model1.add(Dense(1, activation='sigmoid'))
 model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
              metrics=['accuracy'])
-
 
 #### Test with less number of input nodes: pruning
 model2 = Sequential()
