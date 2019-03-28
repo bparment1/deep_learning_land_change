@@ -239,6 +239,7 @@ X_training_df.to_csv(os.path.join(out_dir,
 X = X_training_df.values
 Y = y_train #.values
 
+## Dealing with imbalence classes
 #import keras
 
 class_weight = {0: 0.15,
@@ -265,7 +266,7 @@ keep_0s = train_dat_0s.sample(frac=train_dat_1s.shape[0]/train_dat_0s.shape[0])
 keep_0s = train_dat_0s.sample(frac=prop_observed,
                               random_state=random_seed)
 
-
+#https://datascience.stackexchange.com/questions/44883/deep-network-not-able-to-learn-imbalanced-data-beyond-the-dominant-class
 train_dat = pd.concat([keep_0s,train_dat_1s],axis=0)
 train_dat.columns
 sum(train_dat.change)/train_dat.shape[0] #50% change and no change
@@ -273,56 +274,72 @@ train_dat.shape #downsampled data
 
 #NOTE INPUT SHOULD BE THE NUMBER OF VAR
 #### Test with less number of input nodes: pruning
-#model1 = Sequential()
-#model1.add(Dense(50, input_dim=9, activation='relu'))
-#model1.add(Dense(100, activation='relu'))
-#model1.add(Dense(50, activation='relu'))
-#model1.add(Dense(1, activation='sigmoid'))
-#model1.add(Dense(1, activation='softmax'))
-
 model1 = Sequential()
-model1.add(Dense(5, input_dim=9, activation='relu'))
-model1.add(Dense(10, activation='relu'))
-model1.add(Dense(10, activation='relu'))
+model1.add(Dense(50, input_dim=9, activation='relu'))
+model1.add(Dense(100, activation='relu'))
+model1.add(Dense(50, activation='relu'))
 model1.add(Dense(1, activation='sigmoid'))
-#model1.add(Dense(1, activation='softmax'))
-
-#model.compile(loss='binary_crossentropy', 
-#              optimizer='adam',
-#              metrics=['accuracy'])
 
 model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
              metrics=['accuracy'])
 
-#### Test with less number of input nodes: pruning
 model2 = Sequential()
-model2.add(Dense(25, input_dim=9, activation='relu'))
-model2.add(Dense(50, activation='relu')) 
-model2.add(Dense(25, activation='relu'))
+model2.add(Dense(5, input_dim=9, activation='relu'))
+model2.add(Dense(10, activation='relu'))
 model2.add(Dense(1, activation='sigmoid'))
-#model.compile(loss='binary_crossentropy', 
-#              optimizer='adam',
-#              metrics=['accuracy'])
 
 model2.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
-              metrics=['accuracy'])
+             metrics=['accuracy'])
 
 #In general the lower the crossentropy, the higher the AUC
 
 #crossentropy measures the distance between probability distributions or in this case between 
 #ground truth distribution  and the predictions
+
+history1_no_weight = model1.fit(
+    X,
+    Y,
+    epochs=50,
+    shuffle=True,
+    verbose=2,
+#    class_weight=class_weight
+)
               
 history1 = model1.fit(
     X,
     Y,
     epochs=50,
     shuffle=True,
-    verbose=2
+    verbose=2,
+    class_weight=class_weight
 )
 
+X_down = train_dat.drop(columns=['change'])
+Y_down = train_dat['change']
+
+history1_undersampling = model1.fit(
+    X_down,
+    Y_down,
+    epochs=50,
+    shuffle=True,
+    verbose=2,
+#    class_weight=class_weight
+)
+
+
+#https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
 # Train the model: takes about 10 min
+from keras import backend as K
+
+inp = model1.input                                           # input placeholder
+outputs = [layer.output for layer in model1.layers]          # all layer outputs
+functors = [K.function([inp, K.learning_phase()], [out])
+
+You can easily get the outputs of any layer by using:
+index=1
+lay_4 = model1.layers[index].output
 
 history2 = model2.fit(
     X,
