@@ -307,7 +307,7 @@ history1_no_weight = model1.fit(
 #    class_weight=class_weight
 )
               
-history1 = model1.fit(
+history1_class_weight = model1.fit(
     X,
     Y,
     epochs=50,
@@ -316,10 +316,45 @@ history1 = model1.fit(
     class_weight=class_weight
 )
 
+model1b = model1
+
+x_validation = X[:1000] #for validation
+y_validation = Y[:1000]
+
+x_partial_train = X[1000:]
+y_partial_train = Y[1000:]
+
+history1b_validation = model1b.fit(
+    x_partial_train,
+    y_partial_train,
+    epochs=50,
+    batch=1000,
+    validation_data=(x_validation,y_validation),
+    verbose=2
+#    class_weight=class_weight
+)
+
+history1b_validation.history['loss']
+validation_loss = history1b_validation.history[]
+
+
+
+
+history1c_class_weight_validation = model1c.fit(
+    x_partial_train,
+    y_partial_train,
+    epochs=50,
+    batch=1000,
+    validation_data=(x_validation,y_validation),
+    verbose=2,
+   class_weight=class_weight
+)
+
+### model 1 d undersampling
 X_down = train_dat.drop(columns=['change'])
 Y_down = train_dat['change']
 
-history1_undersampling = model1.fit(
+history2_undersampling = model1.fit(
     X_down,
     Y_down,
     epochs=50,
@@ -327,7 +362,6 @@ history1_undersampling = model1.fit(
     verbose=2,
 #    class_weight=class_weight
 )
-
 
 #https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
 # Train the model: takes about 10 min
@@ -337,7 +371,7 @@ inp = model1.input                                           # input placeholder
 outputs = [layer.output for layer in model1.layers]          # all layer outputs
 functors = [K.function([inp, K.learning_phase()], [out])
 
-You can easily get the outputs of any layer by using:
+#You can easily get the outputs of any layer by using:
 index=1
 lay_4 = model1.layers[index].output
 
@@ -352,15 +386,15 @@ history2 = model2.fit(
 ### Note you should add a validation dataset!!!
 ##See book p.89 Deep learning with python
 
-#num_epochs = 50
-#history = model.fit(
-#    partial_train_data,
-#    partial_train_target,
-#    validation_data=(val_data,val_targets)
-#    epochs=num_epochs,
-#    batch_size=1,
-#    verbose=0)
-#)
+num_epochs = 50
+history = model2.fit(
+    partial_train_data,
+   partial_train_target,
+    validation_data=(val_data,val_targets)
+    epochs=num_epochs,
+    batch_size=1,
+    verbose=0)
+)
 
 epoch_step = np.arange(1,51,1)
 
