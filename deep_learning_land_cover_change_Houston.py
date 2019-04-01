@@ -283,7 +283,7 @@ model1.add(Dense(1, activation='sigmoid'))
 ### model 1 wihtout validation
 model1b = keras.models.clone_model(model1)
 ### model 1b with validation set
-model1b = keras.models.clone_model(model1)
+model1c = keras.models.clone_model(model1)
 ### model 1c with validation set and weight
 model1c = keras.models.clone_model(model1)
 
@@ -315,6 +315,9 @@ model2.compile(loss='binary_crossentropy', #crossentropy can be optimized and is
 
 ########### MODEL FITTING ###########
 
+X = X_training_df.values
+Y = y_train #.values
+
 history1_no_weight = model1.fit(
     X,
     Y,
@@ -324,18 +327,8 @@ history1_no_weight = model1.fit(
 #    class_weight=class_weight
 )
               
+###### Use validation
               
-history1_class_weight = model1.fit(
-    X,
-    Y,
-    epochs=50,
-    shuffle=True,
-    verbose=2,
-    class_weight=class_weight
-)
-
-model1b = model1
-
 x_validation = X[:1000] #for validation
 y_validation = Y[:1000]
 
@@ -346,17 +339,36 @@ history1b_validation = model1b.fit(
     x_partial_train,
     y_partial_train,
     epochs=50,
-    batch=1000,
+    #batch=1000,
     validation_data=(x_validation,y_validation),
     verbose=2
 #    class_weight=class_weight
 )
 
-history1b_validation.history['loss']
-validation_loss = history1b_validation.history[]
+training_loss = history1b_validation.history['loss'] #training
+validation_loss = history1b_validation.history['val_loss']
 
+loss_acc_fit_model1b_df = pd.DataFrame(history1b_validation.history)
 
+loss_acc_fit_model1b_df.to_csv("loss_acc_fit_model1b_validation_df.csv")
 
+type(history1.history) # this is a dictionary
+history1.history['acc']
+history1.history['loss']
+history1.epoch
+
+#test=pd.DataFrame(np.array((epoch_step,history2.history['acc'],history2.history['loss'])).T)
+test=pd.DataFrame({'epoch':epoch_step,
+                   'acc':history1.history['acc'],
+                   'loss':history1.history['loss']})
+
+test.shape
+test.head()
+#history.history['val_mean_absolute_error']
+#model.history.epoch # epoch
+#model.history.history.loss
+
+###### Use validation and class weight
 
 history1c_class_weight_validation = model1c.fit(
     x_partial_train,
@@ -368,9 +380,21 @@ history1c_class_weight_validation = model1c.fit(
    class_weight=class_weight
 )
 
-### model 1 d undersampling
+########### Down sampling
+
+#### model 1 d undersampling
 X_down = train_dat.drop(columns=['change'])
 Y_down = train_dat['change']
+
+history2_undersampling = model1.fit(
+    X_down,
+    Y_down,
+    epochs=50,
+    shuffle=True,
+    verbose=2,
+#    class_weight=class_weight
+)
+
 
 history2_undersampling = model1.fit(
     X_down,
