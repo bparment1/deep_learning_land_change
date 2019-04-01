@@ -285,7 +285,7 @@ model1b = keras.models.clone_model(model1)
 ### model 1b with validation set
 model1c = keras.models.clone_model(model1)
 ### model 1c with validation set and weight
-model1c = keras.models.clone_model(model1)
+model1d = keras.models.clone_model(model1)
 
 
 
@@ -298,6 +298,10 @@ model1b.compile(loss='binary_crossentropy', #crossentropy can be optimized and i
              metrics=['accuracy'])
 
 model1c.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
+              optimizer='rmsprop',
+             metrics=['accuracy'])
+
+model1d.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
              metrics=['accuracy'])
 
@@ -373,6 +377,19 @@ loss_acc_fit_model1c_df.to_csv("loss_acc_fit_model1c_validation_weight_df.csv")
 X_down = train_dat.drop(columns=['change'])
 Y_down = train_dat['change']
 
+history1c_validation_weight = model1c.fit(
+    x_partial_train,
+    y_partial_train,
+    epochs=50,
+    #batch=1000,
+    validation_data=(x_validation,y_validation),
+    verbose=2,
+   class_weight=class_weight
+)
+
+loss_acc_fit_model1c_df = pd.DataFrame(history1c_validation_weight.history)
+loss_acc_fit_model1c_df.to_csv("loss_acc_fit_model1c_validation_weight_df.csv")
+
 history2_undersampling = model1.fit(
     X_down,
     Y_down,
@@ -383,80 +400,9 @@ history2_undersampling = model1.fit(
 )
 
 
-history2_undersampling = model1.fit(
-    X_down,
-    Y_down,
-    epochs=50,
-    shuffle=True,
-    verbose=2,
-#    class_weight=class_weight
-)
 
-#https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
-# Train the model: takes about 10 min
-from keras import backend as K
 
-inp = model1.input                                           # input placeholder
-outputs = [layer.output for layer in model1.layers]          # all layer outputs
-functors = [K.function([inp, K.learning_phase()], [out])
-
-#You can easily get the outputs of any layer by using:
-index=1
-lay_4 = model1.layers[index].output
-
-history2 = model2.fit(
-    X,
-    Y,
-    epochs=50,
-    shuffle=True,
-    verbose=2
-)
-
-### Note you should add a validation dataset!!!
-##See book p.89 Deep learning with python
-
-num_epochs = 50
-history = model2.fit(
-    partial_train_data,
-   partial_train_target,
-    validation_data=(val_data,val_targets)
-    epochs=num_epochs,
-    batch_size=1,
-    verbose=0)
-)
-
-epoch_step = np.arange(1,51,1)
-
-type(history1.history) # this is a dictionary
-history1.history['acc']
-history1.history['loss']
-history1.epoch
-
-#test=pd.DataFrame(np.array((epoch_step,history2.history['acc'],history2.history['loss'])).T)
-test=pd.DataFrame({'epoch':epoch_step,
-                   'acc':history1.history['acc'],
-                   'loss':history1.history['loss']})
-
-test.shape
-test.head()
-#history.history['val_mean_absolute_error']
-#model.history.epoch # epoch
-#model.history.history.loss
-
-plt.plot(test['epoch'],test['acc'])
-#plt.plot(test['acc'])
- 
-# multiple line plot
-plt.plot( 'epoch', 'acc', 
-         data=test, 
-         marker='o', markerfacecolor='blue', 
-         markersize=12, 
-         color='skyblue', linewidth=4)
-plt.plot( 'epoch', 'loss', 
-         data=test, 
-         marker='', 
-         color='olive', linewidth=2)
-
+e
 #plt.plot( 'x', 'y3', data=df, 
 #         marker='', color='olive', 
 #         linewidth=2, linestyle='dashed', label="toto")
@@ -508,20 +454,7 @@ sum(y_train.change)/y_train.shape[0]
 ###########################################
 ### PART 4: Accuracy and prediction on new data #######
 
-https://stackoverflow.com/questions/50115762/output-probability-score-with-keras-using-model-predict
-
-from keras import layers
-from keras import models
-from keras import __version__ as used_keras_version
-import numpy as np
-
-
-model = models.Sequential()
-model.add(layers.Dense(5, activation='sigmoid', input_shape=(1,)))
-model.add(layers.Dense(1, activation='sigmoid'))
-print((model.predict(np.random.rand(10))))
-print('Keras version used: {}'.format(used_keras_version))
-
+#https://stackoverflow.com/questions/50115762/output-probability-score-with-keras-using-model-predict
 
 ######################
 #Predictions, getting final activiation layer
@@ -537,9 +470,17 @@ pred_train_model1b = pd.DataFrame(model1b.predict(X_train.values))
 pred_train_model1b.max()
 pred_test_model1b.max()
 
-pred_train_model1b.to_csv("pred_train_model1b_df.csv")
-pred_test_model1b.to_csv("pred_test_model1b_df.csv")
+pred_train_model1b.to_csv("pred_train_model1b_validation_df.csv")
+pred_test_model1b.to_csv("pred_test_model1b_validation_df.csv")
 
+pred_test_model1c = pd.DataFrame(model1c.predict(X_test.values))
+pred_train_model1c = pd.DataFrame(model1c.predict(X_train.values))
+
+pred_train_model1c.max()
+pred_test_model1c.max()
+
+pred_train_model1b.to_csv("pred_train_model1c_validation_and_weight_df.csv")
+pred_test_model1b.to_csv("pred_test_model1c_validation_and_weight_df.csv")
 
 evaluate(X_test, 
          y_test, 
@@ -548,14 +489,29 @@ evaluate(X_test,
 print("The mean squared error (MSE) for the test data set is: {}".format(test_error_rate))
 
 
-tt=model1.predict_proba(X_test.values)
-tt.shape
-tt.sum()
-tt[0:6,]
-tt.max()
-tt.min()
+#https://www.dlology.com/blog/simple-guide-on-how-to-generate-roc-plot-for-keras-classifier/
 
-https://www.dlology.com/blog/simple-guide-on-how-to-generate-roc-plot-for-keras-classifier/
+poch_step = np.arange(1,51,1)
+
+type(history1.history) # this is a dictionary
+history1.history['acc']
+history1.history['loss']
+history1.epoch
+
+
+plt.plot(test['epoch'],test['acc'])
+#plt.plot(test['acc'])
+ 
+# multiple line plot
+plt.plot( 'epoch', 'acc', 
+         data=test, 
+         marker='o', markerfacecolor='blue', 
+         markersize=12, 
+         color='skyblue', linewidth=4)
+plt.plot( 'epoch', 'loss', 
+         data=test, 
+         marker='', 
+         color='olive', linewidth=2)
 
 # Load the data we make to use to make a prediction
 #X = pd.read_csv("proposed_new_product.csv").values
