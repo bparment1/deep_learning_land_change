@@ -123,8 +123,8 @@ data_fname = 'r_variables_harris_county_exercise4_02072019.txt'
 
 if create_out_dir==True:
     #out_path<-"/data/project/layers/commons/data_workflow/output_data"
-    out_dir = "output_data_"+out_suffix
-    out_dir = os.path.join(in_dir,out_dir)
+    out_dir_new = "output_data_"+out_suffix
+    out_dir = os.path.join(out_dir,out_dir_new)
     create_dir_and_check_existence(out_dir)
     os.chdir(out_dir)        #set working directory
 else:
@@ -242,9 +242,9 @@ Y = y_train #.values
 ## Dealing with imbalence classes
 #import keras
 
-class_weight = {0: 0.15,
-                1: 0.85}
-#model.fit(X_train, Y_train, epochs=10, 
+class_weight = {0: 0.1,
+                1: 0.9}
+#model.fit(X_train, Y_train, 9epochs=10, 
 #          batch_size=32, class_weight=class_weight)
 
 # Define the model
@@ -286,6 +286,8 @@ model1b = keras.models.clone_model(model1)
 model1c = keras.models.clone_model(model1)
 ### model 1c with validation set and weight
 model1c = keras.models.clone_model(model1)
+
+
 
 model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
@@ -345,40 +347,25 @@ history1b_validation = model1b.fit(
 #    class_weight=class_weight
 )
 
-training_loss = history1b_validation.history['loss'] #training
-validation_loss = history1b_validation.history['val_loss']
-
 loss_acc_fit_model1b_df = pd.DataFrame(history1b_validation.history)
 
 loss_acc_fit_model1b_df.to_csv("loss_acc_fit_model1b_validation_df.csv")
 
-type(history1.history) # this is a dictionary
-history1.history['acc']
-history1.history['loss']
-history1.epoch
-
-#test=pd.DataFrame(np.array((epoch_step,history2.history['acc'],history2.history['loss'])).T)
-test=pd.DataFrame({'epoch':epoch_step,
-                   'acc':history1.history['acc'],
-                   'loss':history1.history['loss']})
-
-test.shape
-test.head()
-#history.history['val_mean_absolute_error']
-#model.history.epoch # epoch
-#model.history.history.loss
 
 ###### Use validation and class weight
 
-history1c_class_weight_validation = model1c.fit(
+history1c_validation_weight = model1c.fit(
     x_partial_train,
     y_partial_train,
     epochs=50,
-    batch=1000,
+    #batch=1000,
     validation_data=(x_validation,y_validation),
     verbose=2,
    class_weight=class_weight
 )
+
+loss_acc_fit_model1c_df = pd.DataFrame(history1c_validation_weight.history)
+loss_acc_fit_model1c_df.to_csv("loss_acc_fit_model1c_validation_weight_df.csv")
 
 ########### Down sampling
 
@@ -539,11 +526,20 @@ print('Keras version used: {}'.format(used_keras_version))
 ######################
 #Predictions, getting final activiation layer
 
-tt=model1.predict_proba(X_test.values)
-tt.shape
-tt.sum()
+np.set_printoptions(suppress=True) #prevent numpy exponential 
+                                   #notation on print, default False
 
-model1._predict(X_test.values)
+#tt=model1b.predict_proba(X_test.values) same as below
+
+pred_test_model1b = pd.DataFrame(model1b.predict(X_test.values))
+pred_train_model1b = pd.DataFrame(model1b.predict(X_train.values))
+
+pred_train_model1b.max()
+pred_test_model1b.max()
+
+pred_train_model1b.to_csv("pred_train_model1b_df.csv")
+pred_test_model1b.to_csv("pred_test_model1b_df.csv")
+
 
 evaluate(X_test, 
          y_test, 
