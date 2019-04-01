@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 03/28/2019
+#DATE MODIFIED: 04/01/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -78,7 +78,7 @@ out_dir = "/home/bparmentier/c_drive/Users/bparmentier/Data/AAG/deeplearning/lan
 #ARGS 3:
 create_out_dir=True #create a new ouput dir if TRUE
 #ARGS 7
-out_suffix = "deep_learning_houston_LUCC_02272019" #output suffix for the files and ouptut folder
+out_suffix = "deep_learning_houston_LUCC_04012019" #output suffix for the files and ouptut folder
 #ARGS 8
 NA_value = -9999 # number of cores
 file_format = ".tif"
@@ -249,7 +249,7 @@ class_weight = {0: 0.15,
 
 # Define the model
 
-### TRy down sampling:
+### Prepare down sampling:
 train_dat = pd.DataFrame(np.concatenate(
                          (X_training_df.values,y_train.values),axis=1),
                          columns=list(X_training_df)+['change'])
@@ -280,7 +280,22 @@ model1.add(Dense(100, activation='relu'))
 model1.add(Dense(50, activation='relu'))
 model1.add(Dense(1, activation='sigmoid'))
 
+### model 1 wihtout validation
+model1b = keras.models.clone_model(model1)
+### model 1b with validation set
+model1b = keras.models.clone_model(model1)
+### model 1c with validation set and weight
+model1c = keras.models.clone_model(model1)
+
 model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
+              optimizer='rmsprop',
+             metrics=['accuracy'])
+
+model1b.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
+              optimizer='rmsprop',
+             metrics=['accuracy'])
+
+model1c.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
               optimizer='rmsprop',
              metrics=['accuracy'])
 
@@ -298,6 +313,8 @@ model2.compile(loss='binary_crossentropy', #crossentropy can be optimized and is
 #crossentropy measures the distance between probability distributions or in this case between 
 #ground truth distribution  and the predictions
 
+########### MODEL FITTING ###########
+
 history1_no_weight = model1.fit(
     X,
     Y,
@@ -306,6 +323,7 @@ history1_no_weight = model1.fit(
     verbose=2,
 #    class_weight=class_weight
 )
+              
               
 history1_class_weight = model1.fit(
     X,
