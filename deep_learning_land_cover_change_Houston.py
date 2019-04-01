@@ -377,7 +377,13 @@ loss_acc_fit_model1c_df.to_csv("loss_acc_fit_model1c_validation_weight_df.csv")
 X_down = train_dat.drop(columns=['change'])
 Y_down = train_dat['change']
 
-history1c_validation_weight = model1c.fit(
+x_validation = X_down[:1000] #for validation
+y_validation = Y_down[:1000]
+
+x_partial_train = X_down[1000:]
+y_partial_train = Y_down[1000:]
+
+history1d_undersampling = model1d.fit(
     x_partial_train,
     y_partial_train,
     epochs=50,
@@ -387,26 +393,8 @@ history1c_validation_weight = model1c.fit(
    class_weight=class_weight
 )
 
-loss_acc_fit_model1c_df = pd.DataFrame(history1c_validation_weight.history)
-loss_acc_fit_model1c_df.to_csv("loss_acc_fit_model1c_validation_weight_df.csv")
-
-history2_undersampling = model1.fit(
-    X_down,
-    Y_down,
-    epochs=50,
-    shuffle=True,
-    verbose=2,
-#    class_weight=class_weight
-)
-
-
-
-
-e
-#plt.plot( 'x', 'y3', data=df, 
-#         marker='', color='olive', 
-#         linewidth=2, linestyle='dashed', label="toto")
-#plt.legend()
+loss_acc_fit_model1d_df = pd.DataFrame(history1d_undersampling.history)
+loss_acc_fit_model1d_df.to_csv("loss_acc_fit_model1c_validation_weight_undersampling_df.csv")
 
 ##################################
 ### logistic model
@@ -479,8 +467,17 @@ pred_train_model1c = pd.DataFrame(model1c.predict(X_train.values))
 pred_train_model1c.max()
 pred_test_model1c.max()
 
-pred_train_model1b.to_csv("pred_train_model1c_validation_and_weight_df.csv")
-pred_test_model1b.to_csv("pred_test_model1c_validation_and_weight_df.csv")
+pred_train_model1c.to_csv("pred_train_model1c_validation_and_weight_df.csv")
+pred_test_model1c.to_csv("pred_test_model1c_validation_and_weight_df.csv")
+
+pred_test_model1d = pd.DataFrame(model1d.predict(X_test.values))
+pred_train_model1d = pd.DataFrame(model1d.predict(X_train.values))
+
+pred_train_model1d.max()
+pred_test_model1d.max()
+
+pred_train_model1d.to_csv("pred_train_model1c_validation_and_weight_df.csv")
+pred_test_model1c.to_csv("pred_test_model1c_validation_and_weight_df.csv")
 
 evaluate(X_test, 
          y_test, 
@@ -497,7 +494,6 @@ type(history1.history) # this is a dictionary
 history1.history['acc']
 history1.history['loss']
 history1.epoch
-
 
 plt.plot(test['epoch'],test['acc'])
 #plt.plot(test['acc'])
