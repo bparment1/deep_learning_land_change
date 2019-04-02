@@ -281,12 +281,31 @@ model1.add(Dense(50, activation='relu'))
 model1.add(Dense(1, activation='sigmoid'))
 
 ### model 1 wihtout validation
-model1b = keras.models.clone_model(model1)
+#model1b = keras.models.clone_model(model1)
+
+model1b = Sequential()
+model1b.add(Dense(50, input_dim=9, activation='relu'))
+model1b.add(Dense(100, activation='relu'))
+model1b.add(Dense(50, activation='relu'))
+model1b.add(Dense(1, activation='sigmoid'))
+
 ### model 1b with validation set
-model1c = keras.models.clone_model(model1)
+#model1c = keras.models.clone_model(model1)
+
+model1c = Sequential()
+model1c.add(Dense(50, input_dim=9, activation='relu'))
+model1c.add(Dense(100, activation='relu'))
+model1c.add(Dense(50, activation='relu'))
+model1c.add(Dense(1, activation='sigmoid'))
+
 ### model 1c with validation set and weight
 model1d = keras.models.clone_model(model1)
 
+model1c = Sequential()
+model1c.add(Dense(50, input_dim=9, activation='relu'))
+model1c.add(Dense(100, activation='relu'))
+model1c.add(Dense(50, activation='relu'))
+model1c.add(Dense(1, activation='sigmoid'))
 
 
 model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
@@ -305,15 +324,6 @@ model1d.compile(loss='binary_crossentropy', #crossentropy can be optimized and i
               optimizer='rmsprop',
              metrics=['accuracy'])
 
-model2 = Sequential()
-model2.add(Dense(5, input_dim=9, activation='relu'))
-model2.add(Dense(10, activation='relu'))
-model2.add(Dense(1, activation='sigmoid'))
-
-model2.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
-              optimizer='rmsprop',
-             metrics=['accuracy'])
-
 #In general the lower the crossentropy, the higher the AUC
 
 #crossentropy measures the distance between probability distributions or in this case between 
@@ -324,14 +334,6 @@ model2.compile(loss='binary_crossentropy', #crossentropy can be optimized and is
 X = X_training_df.values
 Y = y_train #.values
 
-history1_no_weight = model1.fit(
-    X,
-    Y,
-    epochs=50,
-    shuffle=True,
-    verbose=2,
-#    class_weight=class_weight
-)
               
 ###### Use validation
               
@@ -340,6 +342,27 @@ y_validation = Y[:1000]
 
 x_partial_train = X[1000:]
 y_partial_train = Y[1000:]
+
+X_down = train_dat.drop(columns=['change'])
+Y_down = train_dat['change']
+
+#history1_no_weight = model1.fit(
+#    X,
+#    Y,
+#    epochs=50,
+#    shuffle=True,
+#    verbose=2,
+#    class_weight=class_weight
+#)
+
+history1_undersampling = model1.fit(
+    X_down,
+    Y_down,
+    epochs=50,
+    #shuffle=True,
+    verbose=2,
+#    class_weight=class_weight
+)
 
 history1b_validation = model1b.fit(
     x_partial_train,
@@ -450,7 +473,26 @@ sum(y_train.change)/y_train.shape[0]
 np.set_printoptions(suppress=True) #prevent numpy exponential 
                                    #notation on print, default False
 
-#tt=model1b.predict_proba(X_test.values) same as below
+pred_test_model1 = pd.DataFrame(model1.predict(X_test.values))
+pred_train_model1 = pd.DataFrame(model1.predict(X_train.values))
+
+pred_train_model1.max()
+pred_test_model1.max()
+
+pred_train_model1.to_csv("pred_train_model1b_validation_df.csv")
+pred_test_model1.to_csv("pred_test_model1b_validation_df.csv")
+
+#####
+X_down = train_dat.drop(columns=['change'])
+Y_down = train_dat['change']
+pred_test_down_model1 = pd.DataFrame(model1.predict(X_test.values))
+pred_train_down_model1 = pd.DataFrame(model1.predict(X_down.values))
+
+pred_train_down_model1.hist()
+pred_train_down_model1.to_csv("pred_train_down_model1_df.csv")
+pred_test_model1.to_csv("pred_test_model1b_validation_df.csv")
+
+###
 
 pred_test_model1b = pd.DataFrame(model1b.predict(X_test.values))
 pred_train_model1b = pd.DataFrame(model1b.predict(X_train.values))
