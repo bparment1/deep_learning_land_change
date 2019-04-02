@@ -10,7 +10,7 @@ Spyder Editor.
 #
 #AUTHORS: Benoit Parmentier
 #DATE CREATED: 02/07/2019
-#DATE MODIFIED: 04/01/2019
+#DATE MODIFIED: 04/02/2019
 #Version: 1
 #PROJECT: AAG 2019
 #TO DO:
@@ -301,11 +301,11 @@ model1c.add(Dense(1, activation='sigmoid'))
 ### model 1c with validation set and weight
 model1d = keras.models.clone_model(model1)
 
-model1c = Sequential()
-model1c.add(Dense(50, input_dim=9, activation='relu'))
-model1c.add(Dense(100, activation='relu'))
-model1c.add(Dense(50, activation='relu'))
-model1c.add(Dense(1, activation='sigmoid'))
+model1d = Sequential()
+model1d.add(Dense(50, input_dim=9, activation='relu'))
+model1d.add(Dense(100, activation='relu'))
+model1d.add(Dense(50, activation='relu'))
+model1d.add(Dense(1, activation='sigmoid'))
 
 
 model1.compile(loss='binary_crossentropy', #crossentropy can be optimized and is proxy for ROC AUC
@@ -363,6 +363,9 @@ history1_undersampling = model1.fit(
     verbose=2,
 #    class_weight=class_weight
 )
+
+loss_acc_fit_model1_df = pd.DataFrame(history1_undersampling.history)
+loss_acc_fit_model1_df.to_csv("loss_acc_fit_model1_undersampling_df.csv")
 
 history1b_validation = model1b.fit(
     x_partial_train,
@@ -473,24 +476,36 @@ sum(y_train.change)/y_train.shape[0]
 np.set_printoptions(suppress=True) #prevent numpy exponential 
                                    #notation on print, default False
 
-pred_test_model1 = pd.DataFrame(model1.predict(X_test.values))
-pred_train_model1 = pd.DataFrame(model1.predict(X_train.values))
+pred_test_model1 = pd.DataFrame(model1.predict(X_test.values),
+                                columns=['pred_undersampling'])
+pred_train_model1 = pd.DataFrame(model1.predict(X_train.values),
+                                 columns=['pred_undersampling'])
 
+#pred_test_model1.rename(columns={"0":"pred_undersampling"},inplace=True)
+
+pred_test_model1.columns
 pred_train_model1.max()
 pred_test_model1.max()
+pred_train_model1.hist()
 
-pred_train_model1.to_csv("pred_train_model1b_validation_df.csv")
-pred_test_model1.to_csv("pred_test_model1b_validation_df.csv")
+pred_train_model1.to_csv("pred_train_all_model1_df.csv")
+pred_test_model1.to_csv("pred_test_all_model1_df.csv")
 
 #####
 X_down = train_dat.drop(columns=['change'])
 Y_down = train_dat['change']
+
+X_test_down = train_dat.drop(columns=['change'])
+Y_down = train_dat['change']
+
 pred_test_down_model1 = pd.DataFrame(model1.predict(X_test.values))
 pred_train_down_model1 = pd.DataFrame(model1.predict(X_down.values))
 
 pred_train_down_model1.hist()
+pred_test_down_model1.hist()
+
 pred_train_down_model1.to_csv("pred_train_down_model1_df.csv")
-pred_test_model1.to_csv("pred_test_model1b_validation_df.csv")
+pred_test_model1.to_csv("pred_test_down_model1_df.csv")
 
 ###
 
@@ -518,8 +533,35 @@ pred_train_model1d = pd.DataFrame(model1d.predict(X_train.values))
 pred_train_model1d.max()
 pred_test_model1d.max()
 
-pred_train_model1d.to_csv("pred_train_model1c_validation_and_weight_df.csv")
-pred_test_model1c.to_csv("pred_test_model1c_validation_and_weight_df.csv")
+pred_train_model1d.to_csv("pred_train_all_model1d_undersampling_validation_and_weight_df.csv")
+pred_test_model1d.to_csv("pred_test_all_model1d_under_sampling_validation_and_weight_df.csv")
+
+####
+
+X_test_down = train_dat.drop(columns=['change'])
+Y_down = train_dat['change']
+
+pred_test_down_model1d = pd.DataFrame(model1d.predict(X_test.values),
+                                      columns=["pred_test"])
+pred_train_down_model1d = pd.DataFrame(model1.predict(X_down.values),
+                                       columns=["pred_train_down"])
+
+pred_train_down_model1d['change'] = Y_down.values
+pred_train_down_model1d.columns
+
+pred_test_down_model1d['change'] = y_test.values
+
+pred_test_down_model1d['pred_test'].hist()
+pred_train_down_model1d['change'].hist()
+
+pred_test_down_model1d.change.hist()
+
+
+pred_train_down_model1d.to_csv("pred_train_down_model1_undersampling_validation_and_weight_df2.csv")
+pred_test_down_model1d.to_csv("pred_test_all_model1_undersampling_validation_and_weight_df.csv")
+
+pred_test_model1d = pd.DataFrame(model1d.predict(X_test.values))
+pred_train_model1d = pd.DataFrame(model1d.predict(X_train.values))
 
 evaluate(X_test, 
          y_test, 
